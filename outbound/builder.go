@@ -55,6 +55,8 @@ func New(ctx context.Context, router adapter.Router, logger log.ContextLogger, t
 		return NewSelector(router, logger, tag, options.SelectorOptions)
 	case C.TypeURLTest:
 		return NewURLTest(ctx, router, logger, tag, options.URLTestOptions)
+	case C.TypeRandom:
+		return NewRandom(router, logger, tag, options.RandomOptions)
 	default:
 		return nil, E.New("unknown outbound type: ", options.Type)
 	}

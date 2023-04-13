@@ -27,3 +27,7 @@ const (
 	TypeSelector = "selector"
 	TypeURLTest  = "urltest"
 )
+
+const (
+	TypeRandom = "random"
+)
