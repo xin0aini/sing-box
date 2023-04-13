@@ -33,6 +33,7 @@ type URLTest struct {
 	link      string
 	interval  time.Duration
 	tolerance uint16
+	fallback  URLTestFallback
 	group     *URLTestGroup
 }
 
@@ -49,6 +50,12 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 		link:      options.URL,
 		interval:  time.Duration(options.Interval),
 		tolerance: options.Tolerance,
+	}
+	if options.Fallback.Enabled {
+		outbound.fallback = URLTestFallback{
+			enabled:  true,
+			maxDelay: options.Fallback.MaxDelay,
+		}
 	}
 	if len(outbound.tags) == 0 {
 		return nil, E.New("missing tags")
@@ -72,7 +79,7 @@ func (s *URLTest) Start() error {
 		}
 		outbounds = append(outbounds, detour)
 	}
-	s.group = NewURLTestGroup(s.ctx, s.router, s.logger, outbounds, s.link, s.interval, s.tolerance)
+	s.group = NewURLTestGroup(s.ctx, s.router, s.logger, outbounds, s.link, s.interval, s.tolerance, s.fallback)
 	go s.group.CheckOutbounds(false)
 	return nil
 }
@@ -144,11 +151,14 @@ type URLTestGroup struct {
 	checking  atomic.Bool
 
 	access sync.Mutex
+
+	fallback URLTestFallback
+
 	ticker *time.Ticker
 	close  chan struct{}
 }
 
-func NewURLTestGroup(ctx context.Context, router adapter.Router, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16) *URLTestGroup {
+func NewURLTestGroup(ctx context.Context, router adapter.Router, logger log.Logger, outbounds []adapter.Outbound, link string, interval time.Duration, tolerance uint16, fallback URLTestFallback) *URLTestGroup {
 	if interval == 0 {
 		interval = C.DefaultURLTestInterval
 	}
@@ -170,6 +180,7 @@ func NewURLTestGroup(ctx context.Context, router adapter.Router, logger log.Logg
 		interval:  interval,
 		tolerance: tolerance,
 		history:   history,
+		fallback:  fallback,
 		close:     make(chan struct{}),
 	}
 }
@@ -208,10 +219,16 @@ func (g *URLTestGroup) Select(network string) adapter.Outbound {
 		if history == nil {
 			continue
 		}
+		if g.fallback.enabled && g.fallback.maxDelay > 0 && history.Delay > g.fallback.maxDelay {
+			continue
+		}
 		if minDelay == 0 || minDelay > history.Delay+g.tolerance || minDelay > history.Delay-g.tolerance && minTime.Before(history.Time) {
 			minDelay = history.Delay
 			minTime = history.Time
 			minOutbound = detour
+			if g.fallback.enabled {
+				break
+			}
 		}
 	}
 	if minOutbound == nil {
@@ -315,4 +332,9 @@ func (g *URLTestGroup) urlTest(ctx context.Context, link string, force bool) (ma
 	}
 	b.Wait()
 	return result, nil
+}
+
+type URLTestFallback struct {
+	enabled  bool
+	maxDelay uint16
 }
