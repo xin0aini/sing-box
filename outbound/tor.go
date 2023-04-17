@@ -102,6 +102,7 @@ var torLogEvents = []control.EventCode{
 }
 
 func (t *Tor) start() error {
+	t.startConf.DebugWriter = &torDebugWriter{t: t}
 	torInstance, err := tor.Start(t.ctx, t.startConf)
 	if err != nil {
 		return E.New(strings.ToLower(err.Error()))
