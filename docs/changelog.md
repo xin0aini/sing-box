@@ -7,7 +7,7 @@
 
 *1:
 
-As in Xray, this is an incompatible update for XUDP in VLESS if vision flow is enabled.
+This is an incompatible update for XUDP in VLESS if vision flow is enabled.
 
 #### 1.3-beta7
 
