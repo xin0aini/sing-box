@@ -177,7 +177,8 @@ func (t *Tun) Start() error {
 		Router:                 tunRouter,
 		Handler:                t,
 		Logger:                 t.logger,
-		UnderPlatform:          t.platformInterface != nil,
+		ForwarderBindInterface: t.platformInterface != nil,
+		InterfaceFinder:        t.router.InterfaceFinder(),
 	})
 	if err != nil {
 		return err
