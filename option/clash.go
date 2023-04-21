@@ -3,6 +3,7 @@ package option
 type ClashAPIOptions struct {
 	ExternalController       string `json:"external_controller,omitempty"`
 	ExternalUI               string `json:"external_ui,omitempty"`
+	ExternalUIBuildIn        bool   `json:"external_ui_build_in,omitempty"`
 	ExternalUIDownloadURL    string `json:"external_ui_download_url,omitempty"`
 	ExternalUIDownloadDetour string `json:"external_ui_download_detour,omitempty"`
 	Secret                   string `json:"secret,omitempty"`

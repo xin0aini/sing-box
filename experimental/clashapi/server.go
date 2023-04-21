@@ -121,6 +121,8 @@ func NewServer(router adapter.Router, logFactory log.ObservableFactory, options 
 				fs.ServeHTTP(w, r)
 			})
 		})
+	} else if options.ExternalUIBuildIn {
+		initWebDir(chiRouter)
 	}
 	return server, nil
 }
