@@ -15,7 +15,7 @@ type ProxyProviderOptions struct {
 	Filter               *ProxyProviderFilterOptions               `json:"filter"`
 	DefaultOutbound      string                                    `json:"default_outbound"`
 	RequestDialerOptions *ProxyProviderRequestDialerOptions        `json:"request_dialer"`
-	DialerOptions        *DialerOptions                            `json:"dialer_options"`
+	DialerOptions        *DialerOptions                            `json:"dialer"`
 	CustomGroup          Listable[ProxyProviderCustomGroupOptions] `json:"custom_group"`
 }
 
