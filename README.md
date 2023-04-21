@@ -36,9 +36,13 @@ with this application without prior consent.
 
 ## 额外功能
 
-```
-1. Proxy-Provider 支持 (with_proxyprovider)
+---
 
+#### 1. Proxy-Provider 支持 (with_proxyprovider)
+编译时加入 tag ```with_proxyprovider```
+
+使用：
+```
 {
     "proxyproviders": [ // proxy-provider 配置，参考下方，若只有一项，可省略[]
         {
@@ -70,6 +74,24 @@ with this application without prior consent.
     "outbounds": [...
     ]
 }
+```
 
+#### 2. 内嵌Yacd-Meta面板 (with_clash_ui)
+编译前请执行：
+```
+git submodule init
+git submodule update
+```
+然后编译时加入 tag ```with_clash_ui```
 
+使用：
+```
+{
+    "experimental": {
+        "clash_api": {
+            "external_controller": "[::]:9090",
+            "external_ui_build_in": true // 启用内嵌的Yacd-Meta
+        }
+    }
+}
 ```
