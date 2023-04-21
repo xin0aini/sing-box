@@ -1,3 +1,14 @@
+#### 1.3-beta8
+
+* Fix `system` tun stack for ios
+* Fix network monitor for android/ios
+* Update VLESS and XUDP protocol **1**
+* Fixes and improvements
+
+*1:
+
+This is an incompatible update for XUDP in VLESS if vision flow is enabled.
+
 #### 1.3-beta7
 
 * Add `path` and `headers` options for HTTP outbound

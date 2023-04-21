@@ -10,7 +10,7 @@ require (
 	github.com/docker/docker v23.0.3+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gofrs/uuid/v5 v5.0.0
-	github.com/sagernet/sing v0.2.4-0.20230418095640-3b5e6c1812d3
+	github.com/sagernet/sing v0.2.4-0.20230420044236-72471d9b35b5
 	github.com/sagernet/sing-shadowsocks v0.2.2-0.20230418025154-6114beeeba6d
 	github.com/spyzhov/ajson v0.8.0
 	github.com/stretchr/testify v1.8.2
@@ -50,7 +50,7 @@ require (
 	github.com/logrusorgru/aurora v2.0.3+incompatible // indirect
 	github.com/mholt/acmez v1.1.0 // indirect
 	github.com/miekg/dns v1.1.53 // indirect
-	github.com/moby/term v0.0.0-20221105221325-4eb28fa6025c // indirect
+	github.com/moby/term v0.0.0-20221205130635-1aeaba878587 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/onsi/ginkgo/v2 v2.2.0 // indirect
 	github.com/ooni/go-libtor v1.1.7 // indirect
@@ -72,13 +72,13 @@ require (
 	github.com/sagernet/reality v0.0.0-20230406110435-ee17307e7691 // indirect
 	github.com/sagernet/sing-dns v0.1.5-0.20230418025317-8a132998b322 // indirect
 	github.com/sagernet/sing-shadowtls v0.1.2-0.20230417103049-4f682e05f19b // indirect
-	github.com/sagernet/sing-tun v0.1.4-0.20230418025339-bf7110b1abe4 // indirect
+	github.com/sagernet/sing-tun v0.1.4-0.20230420035616-8bf411334315 // indirect
 	github.com/sagernet/sing-vmess v0.1.5-0.20230417103030-8c3070ae3fb3 // indirect
 	github.com/sagernet/smux v0.0.0-20230312102458-337ec2a5af37 // indirect
 	github.com/sagernet/tfo-go v0.0.0-20230303015439-ffcfd8c41cf9 // indirect
 	github.com/sagernet/utls v0.0.0-20230309024959-6732c2ab36f2 // indirect
 	github.com/sagernet/websocket v0.0.0-20220913015213-615516348b4e // indirect
-	github.com/sagernet/wireguard-go v0.0.0-20221116151939-c99467f53f2c // indirect
+	github.com/sagernet/wireguard-go v0.0.0-20230420044414-a7bac1754e77 // indirect
 	github.com/u-root/uio v0.0.0-20230220225925-ffce2a382923 // indirect
 	github.com/vishvananda/netns v0.0.0-20211101163701-50045581ed74 // indirect
 	go.etcd.io/bbolt v1.3.7 // indirect
@@ -101,5 +101,3 @@ require (
 	gvisor.dev/gvisor v0.0.0-20220901235040-6ca97ef2ce1c // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
-
-//replace github.com/sagernet/sing => ../../sing
