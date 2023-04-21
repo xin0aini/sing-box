@@ -13,6 +13,7 @@ type ProxyProviderOptions struct {
 	ForceUpdate          Duration                                  `json:"force_update"`
 	DNS                  string                                    `json:"dns"`
 	Filter               *ProxyProviderFilterOptions               `json:"filter"`
+	DefaultOutbound      string                                    `json:"default_outbound"`
 	RequestDialerOptions *ProxyProviderRequestDialerOptions        `json:"request_dialer"`
 	DialerOptions        *DialerOptions                            `json:"dialer_options"`
 	CustomGroup          Listable[ProxyProviderCustomGroupOptions] `json:"custom_group"`

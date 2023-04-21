@@ -77,6 +77,14 @@ func (p *ProxyProvider) GetOutboundOptions() ([]option.Outbound, error) {
 	globalOutboundOptions.SelectorOptions = option.SelectorOutboundOptions{
 		Outbounds: globalGroupTags,
 	}
+	if p.options.DefaultOutbound != "" {
+		for _, t := range globalGroupTags {
+			if t == p.options.DefaultOutbound {
+				globalOutboundOptions.SelectorOptions.Default = t
+				break
+			}
+		}
+	}
 
 	outbounds = append(outbounds, globalOutboundOptions)
 
