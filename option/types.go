@@ -2,6 +2,7 @@ package option
 
 import (
 	"net/netip"
+	"regexp"
 	"strings"
 	"time"
 
@@ -82,7 +83,7 @@ func (v NetworkList) Build() []string {
 	return strings.Split(string(v), "\n")
 }
 
-type Listable[T comparable] []T
+type Listable[T any] []T
 
 func (l Listable[T]) MarshalJSON() ([]byte, error) {
 	arrayList := []T(l)
@@ -234,4 +235,46 @@ func DNSQueryTypeToString(queryType uint16) string {
 		return typeName
 	}
 	return F.ToString(queryType)
+}
+
+//
+
+type Filter struct {
+	mode  string // tag/type
+	regex *regexp.Regexp
+}
+
+func (f *Filter) UnmarshalJSON(bytes []byte) error {
+	var _filter string
+	err := json.Unmarshal(bytes, &_filter)
+	if err != nil {
+		return err
+	}
+	switch {
+	case strings.Index(_filter, "tag:") == 0:
+		f.mode = "tag"
+		f.regex, err = regexp.Compile(strings.Replace(_filter, "tag:", "", 1))
+	case strings.Index(_filter, "type:") == 0:
+		f.mode = "type"
+		f.regex, err = regexp.Compile(strings.Replace(_filter, "type:", "", 1))
+	default:
+		f.mode = "tag"
+		f.regex, err = regexp.Compile(_filter)
+	}
+	return err
+}
+
+func (f Filter) MarshalJSON() ([]byte, error) {
+	return json.Marshal(f.mode + ":" + f.regex.String())
+}
+
+func (f *Filter) Match(tag string, _type string) bool {
+	switch f.mode {
+	case "tag":
+		return f.regex.MatchString(tag)
+	case "type":
+		return f.regex.MatchString(_type)
+	default:
+		return false
+	}
 }

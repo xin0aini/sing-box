@@ -3,6 +3,7 @@ package box
 import (
 	"context"
 	"fmt"
+	"github.com/sagernet/sing-box/proxyprovider"
 	"io"
 	"os"
 	"runtime/debug"
@@ -124,7 +125,30 @@ func New(options Options) (*Box, error) {
 		}
 		outbounds = append(outbounds, out)
 	}
-	err = router.Initialize(inbounds, outbounds, func() adapter.Outbound {
+	var proxyProviders []adapter.ProxyProvider
+	var proxyProviderOutbounds map[string][]adapter.Outbound
+	if options.ProxyProviders != nil && len(options.ProxyProviders) > 0 {
+		proxyProviders = make([]adapter.ProxyProvider, 0)
+		proxyProviderOutbounds = make(map[string][]adapter.Outbound)
+		for i, proxyProviderOptions := range options.ProxyProviders {
+			pp, err := proxyprovider.NewProxyProvider(ctx, router, logFactory, proxyProviderOptions)
+			if err != nil {
+				return nil, E.Cause(err, "parse proxy provider[", i, "]")
+			}
+			err = pp.Update()
+			if err != nil {
+				return nil, E.Cause(err, "update proxy provider[", i, "]")
+			}
+			outs, err := pp.GetOutbounds()
+			if err != nil {
+				return nil, E.Cause(err, "get outbounds from proxy provider[", i, "]")
+			}
+			outbounds = append(outbounds, outs...)
+			proxyProviderOutbounds[pp.Tag()] = outs
+			proxyProviders = append(proxyProviders, pp)
+		}
+	}
+	err = router.Initialize(inbounds, outbounds, proxyProviders, proxyProviderOutbounds, func() adapter.Outbound {
 		out, oErr := outbound.New(ctx, router, logFactory.NewLogger("outbound/direct"), "direct", option.Outbound{Type: "direct", Tag: "default"})
 		common.Must(oErr)
 		outbounds = append(outbounds, out)
