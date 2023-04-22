@@ -3,16 +3,21 @@
 package proxyprovider
 
 import (
+	"bytes"
 	"context"
+	"crypto/tls"
+	"github.com/sagernet/quic-go"
+	"github.com/sagernet/quic-go/http3"
 	"github.com/sagernet/sing-box/proxyprovider/proxy"
+	"github.com/sagernet/sing/common/bufio"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
 	"gopkg.in/yaml.v3"
 	"io"
 	"net"
 	"net/http"
 	"net/netip"
-	"net/url"
 	"os"
 	"regexp"
 	"strconv"
@@ -177,62 +182,15 @@ func (p *ProxyProvider) writeCache() error {
 }
 
 func (p *ProxyProvider) request() (*subscriptionRawData, error) {
-	u, err := url.Parse(p.options.URL)
-	if err != nil {
-		return nil, E.Cause(err, "failed to parse url")
-	}
-
-	port := u.Port()
-	if port == "" {
-		if u.Scheme == "http" {
-			port = "80"
-		} else if u.Scheme == "https" {
-			port = "443"
-		}
-	}
-
-	addr := u.Hostname()
-	ip, err := netip.ParseAddr(addr)
-	if err != nil {
-		ips, err := p.query(addr)
-		if err != nil {
-			return nil, E.Cause(err, "failed to resolve domain")
-		}
-		ip = ips[0]
-	}
-
-	remoteAddr := net.JoinHostPort(ip.String(), port)
-
 	req, err := http.NewRequest(http.MethodGet, p.options.URL, nil)
 	if err != nil {
 		return nil, E.Cause(err, "failed to create request")
 	}
 	req.Header.Set("User-Agent", "clash")
-	req.RemoteAddr = remoteAddr
 
-	client := &http.Client{
-		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return p.dialer.DialContext(ctx, network, M.ParseSocksaddr(addr))
-			},
-			ForceAttemptHTTP2: true,
-		},
-	}
-
-	reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*30)
-	defer reqCancel()
-
-	req = req.WithContext(reqCtx)
-
-	resp, err := client.Do(req)
+	header, data, err := p.httpRequest(req)
 	if err != nil {
 		return nil, E.Cause(err, "failed to request")
-	}
-	defer resp.Body.Close()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, E.Cause(err, "failed to read response")
 	}
 
 	s := &subscriptionRawData{
@@ -240,7 +198,7 @@ func (p *ProxyProvider) request() (*subscriptionRawData, error) {
 	}
 	s.UpdateTime = time.Now()
 
-	subscriptionInfo := resp.Header.Get("subscription-userinfo")
+	subscriptionInfo := header.Get("subscription-userinfo")
 	if subscriptionInfo != "" {
 		subscriptionInfo = strings.ToLower(subscriptionInfo)
 		regTraffic := regexp.MustCompile("upload=(\\d+); download=(\\d+); total=(\\d+)")
@@ -270,4 +228,90 @@ func (p *ProxyProvider) request() (*subscriptionRawData, error) {
 	}
 
 	return s, nil
+}
+
+func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, error) {
+	var (
+		ip  netip.Addr
+		err error
+	)
+
+	if p.options.RequestIP != nil {
+		ip = *p.options.RequestIP
+	} else {
+		ip, err = netip.ParseAddr(req.URL.Hostname())
+		if err != nil {
+			ips, err := p.query(req.URL.Hostname())
+			if err != nil {
+				return nil, nil, E.Cause(err, "failed to resolve domain")
+			}
+			ip = ips[0]
+		}
+	}
+
+	port := req.URL.Port()
+	if port == "" {
+		if req.URL.Scheme == "https" {
+			port = "443"
+		} else if req.URL.Scheme == "http" {
+			port = "80"
+		}
+	}
+
+	req.RemoteAddr = net.JoinHostPort(ip.String(), port)
+
+	if p.options.HTTP3 {
+		h3Client := &http.Client{
+			Transport: &http3.RoundTripper{
+				Dial: func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
+					destinationAddr := M.ParseSocksaddr(addr)
+					conn, err := p.dialer.DialContext(ctx, N.NetworkUDP, destinationAddr)
+					if err != nil {
+						return nil, err
+					}
+					return quic.DialEarlyContext(ctx, bufio.NewUnbindPacketConn(conn), conn.RemoteAddr(), destinationAddr.AddrString(), tlsCfg, cfg)
+				},
+			},
+		}
+
+		reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*20)
+		defer reqCancel()
+		reqWithCtx := req.Clone(context.Background())
+		reqWithCtx = reqWithCtx.WithContext(reqCtx)
+		resp, err := h3Client.Do(reqWithCtx)
+		if err == nil {
+			defer resp.Body.Close()
+			buf := &bytes.Buffer{}
+			_, err = io.Copy(buf, resp.Body)
+			if err != nil {
+				return nil, nil, err
+			}
+			return resp.Header, buf.Bytes(), nil
+		}
+	}
+
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+				return p.dialer.DialContext(ctx, network, M.ParseSocksaddr(addr))
+			},
+			ForceAttemptHTTP2: true,
+		},
+	}
+
+	reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*20)
+	defer reqCancel()
+	reqWithCtx := req.Clone(context.Background())
+	reqWithCtx = reqWithCtx.WithContext(reqCtx)
+	resp, err := client.Do(reqWithCtx)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer resp.Body.Close()
+	buf := &bytes.Buffer{}
+	_, err = io.Copy(buf, resp.Body)
+	if err != nil {
+		return nil, nil, err
+	}
+	return resp.Header, buf.Bytes(), nil
 }

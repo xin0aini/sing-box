@@ -4,6 +4,7 @@ import (
 	"github.com/sagernet/sing-box/common/json"
 	C "github.com/sagernet/sing-box/constant"
 	E "github.com/sagernet/sing/common/exceptions"
+	"net/netip"
 )
 
 type ProxyProviderOptions struct {
@@ -11,6 +12,8 @@ type ProxyProviderOptions struct {
 	URL                  string                                    `json:"url"`
 	CacheFile            string                                    `json:"cache_file"`
 	ForceUpdate          Duration                                  `json:"force_update"`
+	HTTP3                bool                                      `json:"http3"`
+	RequestIP            *netip.Addr                               `json:"ip"`
 	DNS                  string                                    `json:"dns"`
 	Filter               *ProxyProviderFilterOptions               `json:"filter"`
 	DefaultOutbound      string                                    `json:"default_outbound"`
