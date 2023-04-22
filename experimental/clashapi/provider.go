@@ -22,7 +22,7 @@ func proxyProviderRouter(server *Server, router adapter.Router) http.Handler {
 	r.Route("/{name}", func(r chi.Router) {
 		r.Use(parseProviderName, findProviderByName(router))
 		r.Get("/", getProvider(server, router))
-		r.Put("/", updateProvider)
+		r.Put("/", updateProvider(server))
 		r.Get("/healthcheck", healthCheckProvider(server, router))
 	})
 	return r
@@ -61,14 +61,20 @@ func getProvider(server *Server, router adapter.Router) func(w http.ResponseWrit
 	}
 }
 
-func updateProvider(w http.ResponseWriter, r *http.Request) {
-	proxyProvider := r.Context().Value(CtxKeyProvider).(adapter.ProxyProvider)
-	if err := proxyProvider.ForceUpdate(); err != nil {
-		render.Status(r, http.StatusServiceUnavailable)
-		render.JSON(w, r, newError(err.Error()))
-		return
+func updateProvider(server *Server) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		proxyProvider := r.Context().Value(CtxKeyProvider).(adapter.ProxyProvider)
+		go func(server *Server, proxyProvider adapter.ProxyProvider) {
+			server.logger.Info("update provider: ", proxyProvider.Tag())
+			err := proxyProvider.ForceUpdate()
+			if err != nil {
+				server.logger.Error("update provider: ", proxyProvider.Tag(), " fail: ", err)
+				return
+			}
+			server.logger.Info("update provider: ", proxyProvider.Tag(), " success")
+		}(server, proxyProvider)
+		render.NoContent(w, r)
 	}
-	render.NoContent(w, r)
 }
 
 func healthCheckProvider(server *Server, router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
