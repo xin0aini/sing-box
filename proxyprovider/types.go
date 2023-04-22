@@ -27,11 +27,12 @@ type ProxyProvider struct {
 	dialer       N.Dialer
 	dnsTransport dns.Transport
 	//
-	subscriptionRawData subscriptionRawData
+	subscriptionRawData     subscriptionRawData
+	subscriptionRawDataLock sync.RWMutex
 	//
 	peerList []proxy.Proxy
 	//
-	updateLock sync.RWMutex
+	updateLock sync.Mutex
 }
 
 type SubScribeInfo struct {

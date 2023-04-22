@@ -233,11 +233,13 @@ func (p *ProxyProvider) getCustomGroupOptions(outbounds *[]option.Outbound) []op
 }
 
 func (p *ProxyProvider) GetUpdateTime() time.Time {
+	p.subscriptionRawDataLock.RLock()
+	defer p.subscriptionRawDataLock.RUnlock()
 	return p.subscriptionRawData.UpdateTime
 }
 
 func (p *ProxyProvider) GetSubscribeInfo() adapter.SubScribeInfo {
-	p.updateLock.RLock()
-	defer p.updateLock.RUnlock()
+	p.subscriptionRawDataLock.RLock()
+	defer p.subscriptionRawDataLock.RUnlock()
 	return &p.subscriptionRawData.SubScribeInfo
 }

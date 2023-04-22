@@ -24,7 +24,9 @@ func (p *ProxyProvider) update() error {
 	cache, cacheTime, cacheErr := p.readCache()
 	if cacheErr == nil {
 		if p.options.ForceUpdate == 0 || time.Since(cacheTime) < time.Duration(p.options.ForceUpdate) {
+			p.subscriptionRawDataLock.Lock()
 			p.subscriptionRawData = *cache
+			p.subscriptionRawDataLock.Unlock()
 			return nil
 		}
 	}
@@ -37,7 +39,9 @@ func (p *ProxyProvider) update() error {
 		return E.Cause(err, "failed to update proxy provider")
 	}
 
+	p.subscriptionRawDataLock.Lock()
 	p.subscriptionRawData = *rawData
+	p.subscriptionRawDataLock.Unlock()
 
 	err = p.writeCache()
 	if err != nil {
@@ -72,7 +76,9 @@ func (p *ProxyProvider) ForceUpdate() error {
 		return E.Cause(err, "failed to update proxy provider")
 	}
 
+	p.subscriptionRawDataLock.Lock()
 	p.subscriptionRawData = *rawData
+	p.subscriptionRawDataLock.Unlock()
 
 	err = p.writeCache()
 	if err != nil {
@@ -84,7 +90,10 @@ func (p *ProxyProvider) ForceUpdate() error {
 
 func (p *ProxyProvider) parseToPeerList() error {
 	var clashConfig proxy.ClashConfig
-	err := yaml.Unmarshal(p.subscriptionRawData.PeerInfo, &clashConfig)
+	p.subscriptionRawDataLock.RLock()
+	PeerInfo := p.subscriptionRawData.PeerInfo
+	p.subscriptionRawDataLock.RUnlock()
+	err := yaml.Unmarshal(PeerInfo, &clashConfig)
 	if err != nil {
 		return p.parseToPeerListFormLink()
 	}
@@ -153,7 +162,10 @@ func (p *ProxyProvider) readCache() (*subscriptionRawData, time.Time, error) {
 
 func (p *ProxyProvider) writeCache() error {
 	if p.options.CacheFile != "" {
-		data, err := p.subscriptionRawData.encode()
+		p.subscriptionRawDataLock.RLock()
+		subscriptionRawData := p.subscriptionRawData
+		p.subscriptionRawDataLock.RUnlock()
+		data, err := subscriptionRawData.encode()
 		if err != nil {
 			return err
 		}
