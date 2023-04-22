@@ -22,6 +22,7 @@ type ProxyClashOptions struct {
 	ShadowsocksOptions  proxyClashShadowsocks  `yaml:"-"`
 	ShadowsocksROptions proxyClashShadowsocksR `yaml:"-"`
 	VMessOptions        proxyClashVMess        `yaml:"-"`
+	TrojanOptions       proxyClashTrojan       `yaml:"-"`
 }
 
 type _proxyClashOptions ProxyClashOptions
@@ -45,6 +46,8 @@ func (p *ProxyClashOptions) UnmarshalYAML(unmarshal func(any) error) error {
 		return unmarshal(&p.ShadowsocksROptions)
 	case "vmess":
 		return unmarshal(&p.VMessOptions)
+	case "trojan":
+		return unmarshal(&p.TrojanOptions)
 	default:
 		// return E.New("unsupported clash proxy type: ", raw.Type)
 		return nil
@@ -63,6 +66,8 @@ func (p *ProxyClashOptions) MarshalYAML() (any, error) {
 		return p.ShadowsocksROptions, nil
 	case "vmess":
 		return p.VMessOptions, nil
+	case "trojan":
+		return p.TrojanOptions, nil
 	default:
 		return nil, E.New("unsupported clash proxy type: ", p.Type)
 	}
@@ -85,6 +90,9 @@ func (p *ProxyClashOptions) ToProxy() (Proxy, error) {
 		opt.SetClashOptions(p.ShadowsocksROptions)
 	case "vmess":
 		opt = &ProxyVMess{}
+		opt.SetClashOptions(p.VMessOptions)
+	case "trojan":
+		opt = &ProxyTrojan{}
 		opt.SetClashOptions(p.VMessOptions)
 	default:
 		return nil, E.New("unsupported clash proxy type: ", p.Type)
