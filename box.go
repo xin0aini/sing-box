@@ -75,6 +75,7 @@ func New(options Options) (*Box, error) {
 	if err != nil {
 		return nil, E.Cause(err, "create log factory")
 	}
+	logger := logFactory.Logger()
 	router, err := route.NewRouter(
 		ctx,
 		logFactory,
@@ -138,6 +139,7 @@ func New(options Options) (*Box, error) {
 			if err != nil {
 				return nil, E.Cause(err, "parse proxy provider[", i, "]")
 			}
+			logger.Info("init proxy provider[", i, "]")
 			err = pp.Update()
 			if err != nil {
 				return nil, E.Cause(err, "update proxy provider[", i, "]")
@@ -149,6 +151,7 @@ func New(options Options) (*Box, error) {
 			outbounds = append(outbounds, outs...)
 			proxyProviderOutbounds[pp.Tag()] = outs
 			proxyProviders = append(proxyProviders, pp)
+			logger.Info("init proxy provider[", i, "]", " done")
 		}
 	}
 	err = router.Initialize(inbounds, outbounds, proxyProviders, proxyProviderOutbounds, func() adapter.Outbound {
@@ -207,7 +210,7 @@ func New(options Options) (*Box, error) {
 		outbounds:    outbounds,
 		createdAt:    createdAt,
 		logFactory:   logFactory,
-		logger:       logFactory.Logger(),
+		logger:       logger,
 		preServices:  preServices,
 		postServices: postServices,
 		scripts:      scripts,
