@@ -9,6 +9,7 @@ import (
 	"github.com/sagernet/sing-box/common/badjson"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
+	"github.com/sagernet/sing-box/outbound"
 	"net/http"
 	"sync"
 	"time"
@@ -22,7 +23,7 @@ func proxyProviderRouter(server *Server, router adapter.Router) http.Handler {
 		r.Use(parseProviderName, findProviderByName(router))
 		r.Get("/", getProvider(server, router))
 		r.Put("/", updateProvider)
-		r.Get("/healthcheck", healthCheckProvider(router))
+		r.Get("/healthcheck", healthCheckProvider(server, router))
 	})
 	return r
 }
@@ -70,10 +71,9 @@ func updateProvider(w http.ResponseWriter, r *http.Request) {
 	render.NoContent(w, r)
 }
 
-func healthCheckProvider(router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
+func healthCheckProvider(server *Server, router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		proxyProvider := r.Context().Value(CtxKeyProvider).(adapter.ProxyProvider)
-		//provider.HealthCheck()
 		outs := router.GetProxyProviderOutbound(proxyProvider.Tag())
 		if outs == nil {
 			render.NoContent(w, r)
@@ -84,9 +84,18 @@ func healthCheckProvider(router adapter.Router) func(w http.ResponseWriter, r *h
 			wg.Add(1)
 			go func(out adapter.Outbound) {
 				defer wg.Done()
+				realTag := outbound.RealTag(out)
 				ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 				defer cancel()
-				urltest.URLTest(ctx, "", out)
+				delay, err := urltest.URLTest(ctx, "", out)
+				if err != nil {
+					server.urlTestHistory.DeleteURLTestHistory(realTag)
+				} else {
+					server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{
+						Time:  time.Now(),
+						Delay: delay,
+					})
+				}
 			}(out)
 		}
 		wg.Wait()

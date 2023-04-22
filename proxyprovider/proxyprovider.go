@@ -237,5 +237,7 @@ func (p *ProxyProvider) GetUpdateTime() time.Time {
 }
 
 func (p *ProxyProvider) GetSubscribeInfo() adapter.SubScribeInfo {
+	p.updateLock.RLock()
+	defer p.updateLock.RUnlock()
 	return &p.subscriptionRawData.SubScribeInfo
 }

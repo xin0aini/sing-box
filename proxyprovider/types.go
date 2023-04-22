@@ -31,7 +31,7 @@ type ProxyProvider struct {
 	//
 	peerList []proxy.Proxy
 	//
-	updateLock sync.Mutex
+	updateLock sync.RWMutex
 }
 
 type SubScribeInfo struct {
