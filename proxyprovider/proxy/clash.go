@@ -93,7 +93,7 @@ func (p *ProxyClashOptions) ToProxy() (Proxy, error) {
 		opt.SetClashOptions(p.VMessOptions)
 	case "trojan":
 		opt = &ProxyTrojan{}
-		opt.SetClashOptions(p.VMessOptions)
+		opt.SetClashOptions(p.TrojanOptions)
 	default:
 		return nil, E.New("unsupported clash proxy type: ", p.Type)
 	}
