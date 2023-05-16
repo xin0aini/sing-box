@@ -85,6 +85,8 @@ func proxyInfo(server *Server, detour adapter.Outbound) *badjson.JSONObject {
 		clashType = "ShadowsocksR"
 	case C.TypeVLESS:
 		clashType = "VLESS"
+	case C.TypeSideLoad:
+		clashType = "SideLoad"
 	case C.TypeTor:
 		clashType = "Tor"
 	case C.TypeSSH:
