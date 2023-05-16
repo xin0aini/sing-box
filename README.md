@@ -138,3 +138,41 @@ git submodule update
 2. 请确保配置文件正确，否则可能会导致程序无法启动
 3. 若配置文件中有proxy-provider，重载配置文件后，proxy-provider可能会更新，更新缓慢会导致启动缓慢，请耐心等待
 ```
+
+#### 4. 支持 SideLoad 出站
+对于 Sing-box 不支持的出站类型，可以通过侧载方式与 Sing-box 共用。只需暴露 Socks 端口，即可与 Sing-box 集成
+
+编译时加入 tag ```with_sideload```
+
+<p align="center">
+  <img width="350px" src="https://raw.githubusercontent.com/yaotthaha/static/master/sideload.png">
+</p>
+
+例子：侧载 tuic 代理
+
+Sing-box 配置：
+```
+{
+  "tag": "sideload-out",
+  "type": "sideload",
+  "server": "www.example.com", // tuic 服务器地址
+  "server_port": 443, // tuic 服务器端口
+  "listen_port": 50001, // tuic 本地监听端口
+  "listen_network": "udp", // 监听从tuic连接的协议类型，tcp/udp，留空都监听
+  "socks5_proxy_port": 50023, // tuic 暴露的socks5代理端口
+  "command": [ // tuic 侧启动命令：/usr/bin/tuic --server www.example.com --server-port 50001 --server-ip 127.0.0.1 --token token123 --local-port 50023
+    "/usr/bin/tuic",
+    "--server",
+    "www.example.com",
+    "--server-port",
+    "50001",
+    "--server-ip",
+    "127.0.0.1",
+    "--token",
+    "token123",
+    "--local-port",
+    "50023"
+  ],
+  // Dial Fields
+}
+```
