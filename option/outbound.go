@@ -26,7 +26,6 @@ type _Outbound struct {
 	SideLoadOptions     SideLoadOutboundOptions     `json:"-"`
 	SelectorOptions     SelectorOutboundOptions     `json:"-"`
 	URLTestOptions      URLTestOutboundOptions      `json:"-"`
-	RandomOptions       RandomOutboundOptions       `json:"-"`
 }
 
 type Outbound _Outbound
@@ -68,8 +67,6 @@ func (h Outbound) MarshalJSON() ([]byte, error) {
 		v = h.SelectorOptions
 	case C.TypeURLTest:
 		v = h.URLTestOptions
-	case C.TypeRandom:
-		v = h.RandomOptions
 	default:
 		return nil, E.New("unknown outbound type: ", h.Type)
 	}
@@ -117,8 +114,6 @@ func (h *Outbound) UnmarshalJSON(bytes []byte) error {
 		v = &h.SelectorOptions
 	case C.TypeURLTest:
 		v = &h.URLTestOptions
-	case C.TypeRandom:
-		v = &h.RandomOptions
 	default:
 		return E.New("unknown outbound type: ", h.Type)
 	}
