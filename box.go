@@ -3,8 +3,6 @@ package box
 import (
 	"context"
 	"fmt"
-	"github.com/sagernet/sing-box/proxyprovider"
-	"github.com/sagernet/sing-box/script"
 	"io"
 	"os"
 	"runtime/debug"
@@ -17,7 +15,9 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/outbound"
+	"github.com/sagernet/sing-box/proxyprovider"
 	"github.com/sagernet/sing-box/route"
+	"github.com/sagernet/sing-box/script"
 	"github.com/sagernet/sing/common"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"

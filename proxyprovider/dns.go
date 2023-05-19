@@ -4,17 +4,19 @@ package proxyprovider
 
 import (
 	"context"
-	mDNS "github.com/miekg/dns"
-	dns "github.com/sagernet/sing-dns"
-	dnsQUIC "github.com/sagernet/sing-dns/quic"
-	E "github.com/sagernet/sing/common/exceptions"
-	M "github.com/sagernet/sing/common/metadata"
 	"net"
 	"net/netip"
 	"net/url"
 	"strings"
 	"sync"
 	"time"
+
+	dns "github.com/sagernet/sing-dns"
+	dnsQUIC "github.com/sagernet/sing-dns/quic"
+	E "github.com/sagernet/sing/common/exceptions"
+	M "github.com/sagernet/sing/common/metadata"
+
+	mDNS "github.com/miekg/dns"
 )
 
 const defaultDNS = "223.5.5.5:53"

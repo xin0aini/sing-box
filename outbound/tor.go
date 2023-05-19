@@ -2,7 +2,6 @@ package outbound
 
 import (
 	"context"
-	"github.com/sagernet/sing/common/atomic"
 	"net"
 	"os"
 	"path/filepath"
@@ -14,6 +13,7 @@ import (
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing/common"
+	"github.com/sagernet/sing/common/atomic"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
 	M "github.com/sagernet/sing/common/metadata"

@@ -4,6 +4,8 @@ package proxyprovider
 
 import (
 	"context"
+	"time"
+
 	"github.com/sagernet/sing-box/adapter"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/log"
@@ -11,7 +13,6 @@ import (
 	"github.com/sagernet/sing-box/outbound"
 	E "github.com/sagernet/sing/common/exceptions"
 	F "github.com/sagernet/sing/common/format"
-	"time"
 )
 
 func NewProxyProvider(ctx context.Context, router adapter.Router, logFactory log.Factory, options option.ProxyProviderOptions) (*ProxyProvider, error) {

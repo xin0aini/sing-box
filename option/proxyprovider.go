@@ -1,10 +1,11 @@
 package option
 
 import (
+	"net/netip"
+
 	"github.com/sagernet/sing-box/common/json"
 	C "github.com/sagernet/sing-box/constant"
 	E "github.com/sagernet/sing/common/exceptions"
-	"net/netip"
 )
 
 type ProxyProviderOptions struct {

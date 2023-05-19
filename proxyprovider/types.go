@@ -7,14 +7,15 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/hex"
+	"sync"
+	"time"
+
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/proxyprovider/proxy"
 	dns "github.com/sagernet/sing-dns"
 	N "github.com/sagernet/sing/common/network"
-	"sync"
-	"time"
 )
 
 type ProxyProvider struct {

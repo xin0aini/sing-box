@@ -3,12 +3,13 @@
 package proxy
 
 import (
+	"net"
+	"strconv"
+
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	dns "github.com/sagernet/sing-dns"
 	E "github.com/sagernet/sing/common/exceptions"
-	"net"
-	"strconv"
 )
 
 type proxyClashHTTP struct {

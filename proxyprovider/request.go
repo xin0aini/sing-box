@@ -6,14 +6,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"github.com/sagernet/quic-go"
-	"github.com/sagernet/quic-go/http3"
-	"github.com/sagernet/sing-box/proxyprovider/proxy"
-	"github.com/sagernet/sing/common/bufio"
-	E "github.com/sagernet/sing/common/exceptions"
-	M "github.com/sagernet/sing/common/metadata"
-	N "github.com/sagernet/sing/common/network"
-	"gopkg.in/yaml.v3"
 	"io"
 	"net"
 	"net/http"
@@ -23,6 +15,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sagernet/quic-go"
+	"github.com/sagernet/quic-go/http3"
+	"github.com/sagernet/sing-box/proxyprovider/proxy"
+	"github.com/sagernet/sing/common/bufio"
+	E "github.com/sagernet/sing/common/exceptions"
+	M "github.com/sagernet/sing/common/metadata"
+	N "github.com/sagernet/sing/common/network"
+
+	"gopkg.in/yaml.v3"
 )
 
 func (p *ProxyProvider) update() error {

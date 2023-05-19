@@ -6,12 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/option"
 	"github.com/sagernet/sing-box/proxyprovider"
 	E "github.com/sagernet/sing/common/exceptions"
+
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var commandParseProxyProvider = &cobra.Command{

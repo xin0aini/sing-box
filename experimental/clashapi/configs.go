@@ -4,9 +4,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/sagernet/sing-box/log"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
-	"github.com/sagernet/sing-box/log"
 )
 
 func configRouter(server *Server, logFactory log.Factory, logger log.Logger) http.Handler {

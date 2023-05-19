@@ -1,8 +1,9 @@
 package adapter
 
 import (
-	"github.com/sagernet/sing-box/option"
 	"time"
+
+	"github.com/sagernet/sing-box/option"
 )
 
 type ProxyProvider interface {

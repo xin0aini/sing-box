@@ -3,16 +3,18 @@ package clashapi
 import (
 	"context"
 	"encoding/json"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
+	"net/http"
+	"sync"
+	"time"
+
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/badjson"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/outbound"
-	"net/http"
-	"sync"
-	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/render"
 )
 
 func proxyProviderRouter(server *Server, router adapter.Router) http.Handler {

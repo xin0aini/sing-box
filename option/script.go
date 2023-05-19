@@ -2,6 +2,7 @@ package option
 
 import (
 	"encoding/json"
+
 	E "github.com/sagernet/sing/common/exceptions"
 )
 

@@ -4,10 +4,11 @@ package clashapi
 
 import (
 	"embed"
-	"github.com/go-chi/chi/v5"
 	"io/fs"
 	"net/http"
 	"path"
+
+	"github.com/go-chi/chi/v5"
 )
 
 //go:embed web_dashboard

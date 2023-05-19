@@ -4,12 +4,14 @@ package main
 
 import (
 	"context"
+	"os"
+
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/proxyprovider"
 	E "github.com/sagernet/sing/common/exceptions"
+
 	"github.com/spf13/cobra"
-	"os"
 )
 
 var commandUpdateProxyProvider = &cobra.Command{
