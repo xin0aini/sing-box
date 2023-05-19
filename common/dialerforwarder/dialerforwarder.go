@@ -6,6 +6,7 @@ import (
 	"net/netip"
 	"os"
 	"runtime"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -14,18 +15,24 @@ import (
 	"github.com/sagernet/sing/common"
 	"github.com/sagernet/sing/common/buf"
 	"github.com/sagernet/sing/common/bufio"
+	"github.com/sagernet/sing/common/canceler"
+	"github.com/sagernet/sing/common/control"
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
 	"github.com/sagernet/sing/common/udpnat"
+	"github.com/sagernet/tfo-go"
 )
 
 type DialerForwarder struct {
-	ctx     context.Context
-	logger  log.ContextLogger
-	dialer  N.Dialer
-	port    uint16
-	network []string
+	ctx         context.Context
+	logger      log.ContextLogger
+	dialer      N.Dialer
+	port        uint16
+	network     []string
+	tcpFastOpen bool
+	udpFragment *bool
+	udpTimeout  time.Duration
 
 	destination          M.Socksaddr
 	tcpListener          net.Listener
@@ -36,7 +43,7 @@ type DialerForwarder struct {
 	inShutdown           atomic.Bool
 }
 
-func NewDialerForwarder(ctx context.Context, logger log.ContextLogger, dialer N.Dialer, port uint16, destination M.Socksaddr, network []string) *DialerForwarder {
+func NewDialerForwarder(ctx context.Context, logger log.ContextLogger, dialer N.Dialer, port uint16, destination M.Socksaddr, network []string, tcpFastOpen bool, udpFragment *bool, udpTimeout time.Duration) *DialerForwarder {
 	return &DialerForwarder{
 		ctx:         ctx,
 		logger:      logger,
@@ -44,16 +51,27 @@ func NewDialerForwarder(ctx context.Context, logger log.ContextLogger, dialer N.
 		port:        port,
 		network:     network,
 		destination: destination,
+		tcpFastOpen: tcpFastOpen,
+		udpFragment: udpFragment,
+		udpTimeout:  udpTimeout,
 	}
 }
 
 func (s *DialerForwarder) Start() error {
 	s.packetOutboundClosed = make(chan struct{})
 	s.packetOutbound = make(chan *udpPacket)
-	s.udpNat = udpnat.New[netip.AddrPort](int64(C.UDPTimeout.Seconds()), s)
+	udpNatTimeout := int64(s.udpTimeout.Seconds())
+	if udpNatTimeout <= 0 {
+		udpNatTimeout = int64(C.UDPTimeout.Seconds())
+	}
+	s.udpNat = udpnat.New[netip.AddrPort](udpNatTimeout, s)
 	if common.Contains(s.network, N.NetworkTCP) {
 		var err error
-		s.tcpListener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: int(s.port)})
+		if !s.tcpFastOpen {
+			s.tcpListener, err = net.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: int(s.port)})
+		} else {
+			s.tcpListener, err = tfo.ListenTCP("tcp", &net.TCPAddr{IP: net.ParseIP("127.0.0.1"), Port: int(s.port)})
+		}
 		if err != nil {
 			return err
 		}
@@ -62,10 +80,21 @@ func (s *DialerForwarder) Start() error {
 	}
 	if common.Contains(s.network, N.NetworkUDP) {
 		var err error
-		s.udpConn, err = net.ListenUDP(N.NetworkUDP, &net.UDPAddr{IP: net.ParseIP("127.0.0.1"), Port: int(s.port)})
+		var lc net.ListenConfig
+		var udpFragment bool
+		if s.udpFragment != nil {
+			udpFragment = *s.udpFragment
+		} else {
+			udpFragment = false
+		}
+		if !udpFragment {
+			lc.Control = control.Append(lc.Control, control.DisableUDPFragment())
+		}
+		udpConn, err := lc.ListenPacket(s.ctx, N.NetworkUDP, net.JoinHostPort("127.0.0.1", strconv.Itoa(int(s.port))))
 		if err != nil {
 			return err
 		}
+		s.udpConn = udpConn.(*net.UDPConn)
 		s.logger.Info("udp server started at ", s.udpConn.LocalAddr())
 		go s.dialUDP()
 		go s.handleUDPOut()
@@ -142,7 +171,7 @@ func (s *DialerForwarder) handleUDP(buffer *buf.Buffer, addr netip.AddrPort) err
 		Destination: s.destination,
 	}
 	s.udpNat.NewContextPacket(s.ctx, metadata.Source.AddrPort(), buffer, metadata, func(natConn N.PacketConn) (context.Context, N.PacketWriter) {
-		return s.ctx, &udpnat.DirectBackWriter{Source: (*udpPacketService)(s), Nat: natConn}
+		return log.ContextWithNewID(s.ctx), &udpnat.DirectBackWriter{Source: (*udpPacketService)(s), Nat: natConn}
 	})
 	return nil
 }
@@ -219,6 +248,13 @@ func (s *udpPacketService) Close() error {
 	return s.udpConn.Close()
 }
 
+func (s *udpPacketService) WriteIsThreadUnsafe() {
+}
+
+func (s *udpPacketService) Upstream() any {
+	return s.udpConn
+}
+
 func (s *DialerForwarder) NewError(ctx context.Context, err error) {
 	common.Close(err)
 	if E.IsClosedOrCanceled(err) {
@@ -233,7 +269,12 @@ func (s *DialerForwarder) NewPacketConnection(ctx context.Context, conn N.Packet
 	if err != nil {
 		return N.HandshakeFailure(conn, err)
 	}
-	return bufio.CopyPacketConn(ctx, conn, bufio.NewPacketConn(outConn))
+	udpTimeout := s.udpTimeout
+	if udpTimeout <= 0 {
+		udpTimeout = C.UDPTimeout
+	}
+	ctx, packetCancelOutConn := canceler.NewPacketConn(ctx, bufio.NewPacketConn(outConn), udpTimeout)
+	return bufio.CopyPacketConn(ctx, conn, packetCancelOutConn)
 }
 
 func copyEarlyConn(ctx context.Context, conn net.Conn, serverConn net.Conn) error {

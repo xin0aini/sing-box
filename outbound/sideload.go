@@ -7,6 +7,7 @@ import (
 	"net"
 	"os/exec"
 	"strings"
+	"time"
 
 	"github.com/sagernet/sing-box/adapter"
 	"github.com/sagernet/sing-box/common/dialer"
@@ -50,7 +51,7 @@ func NewSideLoad(ctx context.Context, router adapter.Router, logger log.ContextL
 		return nil, E.New("socks5 proxy port not found")
 	}
 	if options.ListenPort != 0 && options.Server != "" && options.ServerPort != 0 {
-		outbound.dialerForwarder = D.NewDialerForwarder(ctx, logger, outbound.dialer, options.ListenPort, options.ServerOptions.Build(), options.ListenNetwork.Build())
+		outbound.dialerForwarder = D.NewDialerForwarder(ctx, logger, outbound.dialer, options.ListenPort, options.ServerOptions.Build(), options.ListenNetwork.Build(), options.TCPFastOpen, options.UDPFragment, time.Duration(options.UDPTimeout)*time.Second)
 	}
 	serverSocksAddr := M.ParseSocksaddrHostPort("127.0.0.1", options.Socks5ProxyPort)
 	outbound.socksClient = socks.NewClient(N.SystemDialer, serverSocksAddr, socks.Version5, "", "")
@@ -72,7 +73,6 @@ func (s *SideLoad) Start() error {
 	if err != nil {
 		return err
 	}
-	s.logger.Info("command start")
 	return nil
 }
 
@@ -81,7 +81,6 @@ func (s *SideLoad) Close() error {
 	if err != nil {
 		return err
 	}
-	s.logger.Info("command stop")
 	if s.dialerForwarder != nil {
 		err = s.dialerForwarder.Close()
 		if err != nil {
