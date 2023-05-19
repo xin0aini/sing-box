@@ -2,8 +2,9 @@ package option
 
 type SideLoadOutboundOptions struct {
 	DialerOptions
-	ServerOptions
-	ListenPort      uint16           `json:"listen_port"`
+	Server          string           `json:"server,omitempty"`
+	ServerPort      uint16           `json:"server_port,omitempty"`
+	ListenPort      uint16           `json:"listen_port,omitempty"`
 	ListenNetwork   NetworkList      `json:"listen_network,omitempty"`
 	UDPTimeout      int64            `json:"udp_timeout,omitempty"`
 	Command         Listable[string] `json:"command"`
