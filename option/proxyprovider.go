@@ -10,16 +10,16 @@ import (
 type ProxyProviderOptions struct {
 	Tag                  string                                    `json:"tag"`
 	URL                  string                                    `json:"url"`
-	CacheFile            string                                    `json:"cache_file"`
-	ForceUpdate          Duration                                  `json:"force_update"`
-	HTTP3                bool                                      `json:"http3"`
-	RequestIP            *netip.Addr                               `json:"ip"`
-	DNS                  string                                    `json:"dns"`
-	Filter               *ProxyProviderFilterOptions               `json:"filter"`
-	DefaultOutbound      string                                    `json:"default_outbound"`
-	RequestDialerOptions *ProxyProviderRequestDialerOptions        `json:"request_dialer"`
-	DialerOptions        *DialerOptions                            `json:"dialer"`
-	CustomGroup          Listable[ProxyProviderCustomGroupOptions] `json:"custom_group"`
+	CacheFile            string                                    `json:"cache_file,omitempty"`
+	ForceUpdate          Duration                                  `json:"force_update,omitempty"`
+	HTTP3                bool                                      `json:"http3,omitempty"`
+	RequestIP            *netip.Addr                               `json:"ip,omitempty"`
+	DNS                  string                                    `json:"dns,omitempty"`
+	Filter               *ProxyProviderFilterOptions               `json:"filter,omitempty"`
+	DefaultOutbound      string                                    `json:"default_outbound,omitempty"`
+	RequestDialerOptions *ProxyProviderRequestDialerOptions        `json:"request_dialer,omitempty"`
+	DialerOptions        *DialerOptions                            `json:"dialer,omitempty"`
+	CustomGroup          Listable[ProxyProviderCustomGroupOptions] `json:"custom_group,omitempty"`
 }
 
 type ProxyProviderCustomGroupOptions struct {
@@ -68,7 +68,7 @@ func (p ProxyProviderCustomGroupOptions) MarshalJSON() ([]byte, error) {
 
 type ProxyProviderFilterOptions struct {
 	Rule      Listable[*Filter] `json:"rule"`
-	WhiteMode bool              `json:"white_mode"`
+	WhiteMode bool              `json:"white_mode,omitempty"`
 }
 
 type ProxyProviderRequestDialerOptions struct {
