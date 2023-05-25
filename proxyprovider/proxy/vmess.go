@@ -31,39 +31,12 @@ type proxyClashVMess struct {
 	//
 	Network string `yaml:"network,omitempty"`
 	//
-	WSOptions    *proxyClashVMessWSOptions    `yaml:"ws-opts,omitempty"`
-	HTTPOptions  *proxyClashVMessHTTPOptions  `yaml:"http-opts,omitempty"`
-	HTTP2Options *proxyClashVMessHTTP2Options `yaml:"h2-opts,omitempty"`
-	GrpcOptions  *proxyClashVMessGrpcOptions  `yaml:"grpc-opts,omitempty"`
+	WSOptions    *proxyClashWSOptions    `yaml:"ws-opts,omitempty"`
+	HTTPOptions  *proxyClashHTTPOptions  `yaml:"http-opts,omitempty"`
+	HTTP2Options *proxyClashHTTP2Options `yaml:"h2-opts,omitempty"`
+	GrpcOptions  *proxyClashGrpcOptions  `yaml:"grpc-opts,omitempty"`
 	//
-	RealityOptions *proxyClashVMessRealityOptions `proxy:"reality-opts,omitempty"`
-}
-
-type proxyClashVMessWSOptions struct {
-	Path                string            `yaml:"path,omitempty"`
-	Headers             map[string]string `yaml:"headers,omitempty"`
-	MaxEarlyData        int               `yaml:"max-early-data,omitempty"`
-	EarlyDataHeaderName string            `yaml:"early-data-header-name,omitempty"`
-}
-
-type proxyClashVMessHTTPOptions struct {
-	Method  string              `yaml:"method,omitempty"`
-	Path    []string            `yaml:"path,omitempty"`
-	Headers map[string][]string `yaml:"headers,omitempty"`
-}
-
-type proxyClashVMessHTTP2Options struct {
-	Host []string `yaml:"host,omitempty"`
-	Path string   `yaml:"path,omitempty"`
-}
-
-type proxyClashVMessGrpcOptions struct {
-	ServiceName string `yaml:"grpc-service-name,omitempty"`
-}
-
-type proxyClashVMessRealityOptions struct {
-	PublicKey string `yaml:"public-key"`
-	ShortID   string `yaml:"short-id"`
+	RealityOptions *proxyClashRealityOptions `proxy:"reality-opts,omitempty"`
 }
 
 type ProxyVMess struct {
@@ -130,7 +103,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 	switch p.clashOptions.Network {
 	case "ws":
 		if p.clashOptions.WSOptions == nil {
-			return nil, E.New("missing ws-opts")
+			p.clashOptions.WSOptions = &proxyClashWSOptions{}
 		}
 
 		opt.VMessOptions.Transport = &option.V2RayTransportOptions{
@@ -142,14 +115,15 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 			},
 		}
 
+		opt.VMessOptions.Transport.WebsocketOptions.Headers = make(map[string]option.Listable[string], 0)
+
 		if p.clashOptions.WSOptions.Headers != nil && len(p.clashOptions.WSOptions.Headers) > 0 {
-			opt.VMessOptions.Transport.WebsocketOptions.Headers = make(map[string]option.Listable[string], 0)
 			for k, v := range p.clashOptions.WSOptions.Headers {
 				opt.VMessOptions.Transport.WebsocketOptions.Headers[k] = option.Listable[string]{v}
 			}
 		}
 
-		if opt.VMessOptions.Transport.WebsocketOptions.Headers == nil || opt.VMessOptions.Transport.WebsocketOptions.Headers["Host"] == nil {
+		if opt.VMessOptions.Transport.WebsocketOptions.Headers["Host"] == nil {
 			opt.VMessOptions.Transport.WebsocketOptions.Headers["Host"] = option.Listable[string]{p.clashOptions.Server}
 		}
 
@@ -181,7 +155,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 		}
 	case "http":
 		if p.clashOptions.HTTPOptions == nil {
-			return nil, E.New("missing http-opts")
+			p.clashOptions.HTTPOptions = &proxyClashHTTPOptions{}
 		}
 
 		opt.VMessOptions.Transport = &option.V2RayTransportOptions{
@@ -279,7 +253,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 		}
 	case "grpc":
 		if p.clashOptions.GrpcOptions == nil {
-			return nil, E.New("missing grpc-opts")
+			p.clashOptions.GrpcOptions = &proxyClashGrpcOptions{}
 		}
 
 		opt.VMessOptions.Transport = &option.V2RayTransportOptions{

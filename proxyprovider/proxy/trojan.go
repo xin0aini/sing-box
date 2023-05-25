@@ -26,29 +26,13 @@ type proxyClashTrojan struct {
 	//
 	UDP bool `yaml:"udp,omitempty"`
 	//
-	Network     string                       `yaml:"network,omitempty"`
-	Flow        string                       `yaml:"flow,omitempty"`
-	FlowShow    bool                         `yaml:"flow-show,omitempty"`
-	GrpcOptions *proxyClashTrojanGRPCOptions `yaml:"grpc-opts,omitempty"`
-	WSOptions   *proxyClashTrojanWSOptions   `yaml:"ws-opts,omitempty"`
+	Network     string                 `yaml:"network,omitempty"`
+	Flow        string                 `yaml:"flow,omitempty"`
+	FlowShow    bool                   `yaml:"flow-show,omitempty"`
+	GrpcOptions *proxyClashGrpcOptions `yaml:"grpc-opts,omitempty"`
+	WSOptions   *proxyClashWSOptions   `yaml:"ws-opts,omitempty"`
 	//
-	RealityOptions *proxyClashTrojanRealityOptions `yaml:"reality-opts,omitempty"`
-}
-
-type proxyClashTrojanGRPCOptions struct {
-	ServiceName string `yaml:"grpc-service-name,omitempty"`
-}
-
-type proxyClashTrojanWSOptions struct {
-	Path                string            `yaml:"path,omitempty"`
-	Headers             map[string]string `yaml:"headers,omitempty"`
-	MaxEarlyData        int               `yaml:"max-early-data,omitempty"`
-	EarlyDataHeaderName string            `yaml:"early-data-header-name,omitempty"`
-}
-
-type proxyClashTrojanRealityOptions struct {
-	PublicKey string `yaml:"public-key"`
-	ShortID   string `yaml:"short-id"`
+	RealityOptions *proxyClashRealityOptions `yaml:"reality-opts,omitempty"`
 }
 
 type ProxyTrojan struct {
@@ -135,7 +119,7 @@ func (p *ProxyTrojan) GenerateOptions() (*option.Outbound, error) {
 	switch p.clashOptions.Network {
 	case "ws":
 		if p.clashOptions.WSOptions == nil {
-			return nil, E.New("missing ws-opts")
+			p.clashOptions.WSOptions = &proxyClashWSOptions{}
 		}
 
 		opt.TrojanOptions.Transport = &option.V2RayTransportOptions{
@@ -147,20 +131,20 @@ func (p *ProxyTrojan) GenerateOptions() (*option.Outbound, error) {
 			},
 		}
 
+		opt.TrojanOptions.Transport.WebsocketOptions.Headers = make(map[string]option.Listable[string], 0)
+
 		if p.clashOptions.WSOptions.Headers != nil && len(p.clashOptions.WSOptions.Headers) > 0 {
-			opt.TrojanOptions.Transport.WebsocketOptions.Headers = make(map[string]option.Listable[string], 0)
 			for k, v := range p.clashOptions.WSOptions.Headers {
 				opt.TrojanOptions.Transport.WebsocketOptions.Headers[k] = option.Listable[string]{v}
 			}
 		}
 
-		if opt.TrojanOptions.Transport.WebsocketOptions.Headers == nil || opt.TrojanOptions.Transport.WebsocketOptions.Headers["Host"] == nil {
+		if opt.TrojanOptions.Transport.WebsocketOptions.Headers["Host"] == nil {
 			opt.TrojanOptions.Transport.WebsocketOptions.Headers["Host"] = option.Listable[string]{opt.TrojanOptions.TLS.ServerName}
 		}
-
 	case "grpc":
 		if p.clashOptions.GrpcOptions == nil {
-			return nil, E.New("missing grpc-opts")
+			p.clashOptions.GrpcOptions = &proxyClashGrpcOptions{}
 		}
 
 		opt.TrojanOptions.Transport = &option.V2RayTransportOptions{

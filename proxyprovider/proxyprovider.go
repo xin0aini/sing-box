@@ -17,10 +17,10 @@ import (
 
 func NewProxyProvider(ctx context.Context, router adapter.Router, logFactory log.Factory, options option.ProxyProviderOptions) (*ProxyProvider, error) {
 	if options.Tag == "" {
-		return nil, E.New("tag is required")
+		return nil, E.New("missing proxyprovider tag")
 	}
 	if options.URL == "" {
-		return nil, E.New("url is required")
+		return nil, E.New("missing proxyprovider url")
 	}
 
 	p := &ProxyProvider{
@@ -46,7 +46,7 @@ func (p *ProxyProvider) Tag() string {
 
 func (p *ProxyProvider) GetOutboundOptions() ([]option.Outbound, error) {
 	if p.peerList == nil {
-		return nil, E.New("peer list is empty")
+		return nil, E.New("proxy list is empty")
 	}
 
 	outbounds := make([]option.Outbound, 0)
@@ -61,8 +61,14 @@ func (p *ProxyProvider) GetOutboundOptions() ([]option.Outbound, error) {
 		}
 		outbounds = append(outbounds, *outboundOptions)
 	}
+	if len(outbounds) == 0 {
+		return nil, E.New("proxy list is empty")
+	}
 
-	groupOutbounds := p.getCustomGroupOptions(&outbounds)
+	groupOutbounds, err := p.getCustomGroupOptions(&outbounds)
+	if err != nil {
+		return nil, E.Cause(err, "parse proxyprovider[", p.Tag(), "] custom group")
+	}
 	if groupOutbounds != nil {
 		outbounds = append(outbounds, groupOutbounds...)
 	}
@@ -94,14 +100,14 @@ func (p *ProxyProvider) GetOutboundOptions() ([]option.Outbound, error) {
 
 func (p *ProxyProvider) GetOutbounds() ([]adapter.Outbound, error) {
 	if p.peerList == nil {
-		return nil, E.New("peer list is empty")
+		return nil, E.New("proxy list is empty")
 	}
 
 	outbounds := make([]adapter.Outbound, 0)
 	for i, px := range p.peerList {
 		outboundOptions, err := px.GenerateOptions()
 		if err != nil {
-			continue
+			return nil, E.Cause(err, "parse proxyprovider[", p.Tag(), "] outbound[", px.Tag(), "]")
 		}
 		tag := px.Tag()
 		if tag == "" {
@@ -113,8 +119,14 @@ func (p *ProxyProvider) GetOutbounds() ([]adapter.Outbound, error) {
 		}
 		outbounds = append(outbounds, out)
 	}
+	if len(outbounds) == 0 {
+		return nil, E.New("proxy list is empty")
+	}
 
-	groupOutbounds := p.getCustomGroups(outbounds)
+	groupOutbounds, err := p.getCustomGroups(outbounds)
+	if err != nil {
+		return nil, E.Cause(err, "parse proxyprovider[", p.Tag(), "] custom group")
+	}
 	if groupOutbounds != nil {
 		outbounds = append(outbounds, groupOutbounds...)
 	}
@@ -141,9 +153,9 @@ func (p *ProxyProvider) GetOutbounds() ([]adapter.Outbound, error) {
 	return outbounds, nil
 }
 
-func (p *ProxyProvider) getCustomGroups(outbounds []adapter.Outbound) []adapter.Outbound {
+func (p *ProxyProvider) getCustomGroups(outbounds []adapter.Outbound) ([]adapter.Outbound, error) {
 	if p.options.CustomGroup == nil || len(p.options.CustomGroup) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	group := make([]adapter.Outbound, 0)
@@ -173,25 +185,25 @@ func (p *ProxyProvider) getCustomGroups(outbounds []adapter.Outbound) []adapter.
 			groupOutOptions.URLTestOptions = g.URLTestOptions
 			groupOutOptions.URLTestOptions.Outbounds = outs
 		default:
-			continue
+			return nil, E.New("unknown group type: ", g.Type)
 		}
 		groupOut, err := outbound.New(p.ctx, p.router, p.logFactory.NewLogger(F.ToString("outbound/", groupOutOptions.Type, "[", groupOutOptions.Tag, "]")), groupOutOptions.Tag, groupOutOptions)
 		if err != nil {
-			continue
+			return nil, err
 		}
 		group = append(group, groupOut)
 	}
 
 	if len(group) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return group
+	return group, nil
 }
 
-func (p *ProxyProvider) getCustomGroupOptions(outbounds *[]option.Outbound) []option.Outbound {
+func (p *ProxyProvider) getCustomGroupOptions(outbounds *[]option.Outbound) ([]option.Outbound, error) {
 	if p.options.CustomGroup == nil || len(p.options.CustomGroup) == 0 {
-		return nil
+		return nil, nil
 	}
 
 	group := make([]option.Outbound, 0)
@@ -221,16 +233,16 @@ func (p *ProxyProvider) getCustomGroupOptions(outbounds *[]option.Outbound) []op
 			groupOutOptions.URLTestOptions = g.URLTestOptions
 			groupOutOptions.URLTestOptions.Outbounds = outs
 		default:
-			continue
+			return nil, E.New("unknown group type: ", g.Type)
 		}
 		group = append(group, groupOutOptions)
 	}
 
 	if len(group) == 0 {
-		return nil
+		return nil, nil
 	}
 
-	return group
+	return group, nil
 }
 
 func (p *ProxyProvider) GetUpdateTime() time.Time {

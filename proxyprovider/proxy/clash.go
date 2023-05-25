@@ -6,6 +6,19 @@ import (
 	E "github.com/sagernet/sing/common/exceptions"
 )
 
+type ClashConfig struct {
+	Proxies []ProxyClashOptions `yaml:"proxies"`
+}
+
+const (
+	ClashTypeHTTP         = "http"
+	ClashTypeSocks5       = "socks5"
+	ClashTypeShadowsocks  = "ss"
+	ClashTypeShadowsocksR = "ssr"
+	ClashTypeVMess        = "vmess"
+	ClashTypeTrojan       = "trojan"
+)
+
 type proxyClashDefault struct {
 	Name       string `yaml:"name"`
 	Type       string `yaml:"type"`
@@ -36,17 +49,17 @@ func (p *ProxyClashOptions) UnmarshalYAML(unmarshal func(any) error) error {
 		Type: raw.Type,
 	}
 	switch raw.Type {
-	case "http":
+	case ClashTypeHTTP:
 		return unmarshal(&p.HTTPOptions)
-	case "socks5":
+	case ClashTypeSocks5:
 		return unmarshal(&p.SocksOptions)
-	case "ss":
+	case ClashTypeShadowsocks:
 		return unmarshal(&p.ShadowsocksOptions)
-	case "ssr":
+	case ClashTypeShadowsocksR:
 		return unmarshal(&p.ShadowsocksROptions)
-	case "vmess":
+	case ClashTypeVMess:
 		return unmarshal(&p.VMessOptions)
-	case "trojan":
+	case ClashTypeTrojan:
 		return unmarshal(&p.TrojanOptions)
 	default:
 		// return E.New("unsupported clash proxy type: ", raw.Type)
@@ -56,17 +69,17 @@ func (p *ProxyClashOptions) UnmarshalYAML(unmarshal func(any) error) error {
 
 func (p *ProxyClashOptions) MarshalYAML() (any, error) {
 	switch p.Type {
-	case "http":
+	case ClashTypeHTTP:
 		return p.HTTPOptions, nil
-	case "socks5":
+	case ClashTypeSocks5:
 		return p.SocksOptions, nil
-	case "ss":
+	case ClashTypeShadowsocks:
 		return p.ShadowsocksOptions, nil
-	case "ssr":
+	case ClashTypeShadowsocksR:
 		return p.ShadowsocksROptions, nil
-	case "vmess":
+	case ClashTypeVMess:
 		return p.VMessOptions, nil
-	case "trojan":
+	case ClashTypeTrojan:
 		return p.TrojanOptions, nil
 	default:
 		return nil, E.New("unsupported clash proxy type: ", p.Type)
@@ -76,22 +89,22 @@ func (p *ProxyClashOptions) MarshalYAML() (any, error) {
 func (p *ProxyClashOptions) ToProxy() (Proxy, error) {
 	var opt Proxy
 	switch p.Type {
-	case "http":
+	case ClashTypeHTTP:
 		opt = &ProxyHTTP{}
 		opt.SetClashOptions(p.HTTPOptions)
-	case "socks5":
+	case ClashTypeSocks5:
 		opt = &ProxySocks{}
 		opt.SetClashOptions(p.SocksOptions)
-	case "ss":
+	case ClashTypeShadowsocks:
 		opt = &ProxyShadowsocks{}
 		opt.SetClashOptions(p.ShadowsocksOptions)
-	case "ssr":
+	case ClashTypeShadowsocksR:
 		opt = &ProxyShadowsocksR{}
 		opt.SetClashOptions(p.ShadowsocksROptions)
-	case "vmess":
+	case ClashTypeVMess:
 		opt = &ProxyVMess{}
 		opt.SetClashOptions(p.VMessOptions)
-	case "trojan":
+	case ClashTypeTrojan:
 		opt = &ProxyTrojan{}
 		opt.SetClashOptions(p.TrojanOptions)
 	default:
@@ -99,8 +112,4 @@ func (p *ProxyClashOptions) ToProxy() (Proxy, error) {
 	}
 	opt.Tag()
 	return opt, nil
-}
-
-type ClashConfig struct {
-	Proxies []ProxyClashOptions `yaml:"proxies"`
 }

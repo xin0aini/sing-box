@@ -105,7 +105,7 @@ func (p *ProxyProvider) parseToPeerList() error {
 		return p.parseToPeerListFormLink()
 	}
 	if clashConfig.Proxies == nil || len(clashConfig.Proxies) == 0 {
-		return E.New("no proxies found")
+		return E.New("proxy not found")
 	}
 
 	proxies := make([]proxy.Proxy, 0)
@@ -129,7 +129,7 @@ func (p *ProxyProvider) parseToPeerList() error {
 }
 
 func (p *ProxyProvider) parseToPeerListFormLink() error {
-	return E.New("failed to parse peer info")
+	return E.New("failed to parse proxy from link")
 }
 
 func (p *ProxyProvider) readCache() (*subscriptionRawData, time.Time, error) {
@@ -138,32 +138,24 @@ func (p *ProxyProvider) readCache() (*subscriptionRawData, time.Time, error) {
 		return nil, time.Time{}, err
 	}
 	defer file.Close()
-
 	fileInfo, err := file.Stat()
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-
 	data := make([]byte, fileInfo.Size())
-
 	var n int
-
 	n, err = file.Read(data)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-
 	if n == 0 {
-		return nil, time.Time{}, E.New("empty cache file")
+		return nil, time.Time{}, E.New("cache file is empty")
 	}
-
 	var s subscriptionRawData
-
 	err = s.decode(data)
 	if err != nil {
 		return nil, time.Time{}, err
 	}
-
 	return &s, fileInfo.ModTime(), nil
 }
 
@@ -176,7 +168,6 @@ func (p *ProxyProvider) writeCache() error {
 		if err != nil {
 			return err
 		}
-
 		return os.WriteFile(p.options.CacheFile, data, 0o644)
 	}
 
@@ -186,20 +177,17 @@ func (p *ProxyProvider) writeCache() error {
 func (p *ProxyProvider) request() (*subscriptionRawData, error) {
 	req, err := http.NewRequest(http.MethodGet, p.options.URL, nil)
 	if err != nil {
-		return nil, E.Cause(err, "failed to create request")
+		return nil, E.Cause(err, "failed to create http request")
 	}
 	req.Header.Set("User-Agent", "clash")
-
 	header, data, err := p.httpRequest(req)
 	if err != nil {
 		return nil, E.Cause(err, "failed to request")
 	}
-
 	s := &subscriptionRawData{
 		PeerInfo: data,
 	}
 	s.UpdateTime = time.Now()
-
 	subscriptionInfo := header.Get("subscription-userinfo")
 	if subscriptionInfo != "" {
 		subscriptionInfo = strings.ToLower(subscriptionInfo)
@@ -237,7 +225,6 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 		ip  netip.Addr
 		err error
 	)
-
 	if p.options.RequestIP != nil {
 		ip = *p.options.RequestIP
 	} else {
@@ -250,7 +237,6 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 			ip = ips[0]
 		}
 	}
-
 	port := req.URL.Port()
 	if port == "" {
 		if req.URL.Scheme == "https" {
@@ -259,9 +245,7 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 			port = "80"
 		}
 	}
-
 	req.RemoteAddr = net.JoinHostPort(ip.String(), port)
-
 	if p.options.HTTP3 {
 		h3Client := &http.Client{
 			Transport: &http3.RoundTripper{
@@ -275,7 +259,6 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 				},
 			},
 		}
-
 		reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*20)
 		defer reqCancel()
 		reqWithCtx := req.Clone(context.Background())
