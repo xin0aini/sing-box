@@ -245,12 +245,12 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 			port = "80"
 		}
 	}
-	req.RemoteAddr = net.JoinHostPort(ip.String(), port)
+
 	if p.options.HTTP3 {
 		h3Client := &http.Client{
 			Transport: &http3.RoundTripper{
-				Dial: func(ctx context.Context, addr string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
-					destinationAddr := M.ParseSocksaddr(addr)
+				Dial: func(ctx context.Context, _ string, tlsCfg *tls.Config, cfg *quic.Config) (quic.EarlyConnection, error) {
+					destinationAddr := M.ParseSocksaddr(net.JoinHostPort(ip.String(), port))
 					conn, err := p.dialer.DialContext(ctx, N.NetworkUDP, destinationAddr)
 					if err != nil {
 						return nil, err
@@ -259,7 +259,7 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 				},
 			},
 		}
-		reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*20)
+		reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*10)
 		defer reqCancel()
 		reqWithCtx := req.Clone(context.Background())
 		reqWithCtx = reqWithCtx.WithContext(reqCtx)
@@ -277,14 +277,14 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 
 	client := &http.Client{
 		Transport: &http.Transport{
-			DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-				return p.dialer.DialContext(ctx, network, M.ParseSocksaddr(addr))
+			DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+				return p.dialer.DialContext(ctx, network, M.ParseSocksaddr(net.JoinHostPort(ip.String(), port)))
 			},
 			ForceAttemptHTTP2: true,
 		},
 	}
 
-	reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*20)
+	reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*10)
 	defer reqCancel()
 	reqWithCtx := req.Clone(context.Background())
 	reqWithCtx = reqWithCtx.WithContext(reqCtx)
