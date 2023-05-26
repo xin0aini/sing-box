@@ -144,6 +144,8 @@ git submodule update
 
 编译时加入 tag ```with_sideload```
 
+**!! 注意**：若 sing-box 被 kill / 发生panic后退出，侧载的程序并**不会退出**，需要**自行终止**，再重新启动sing-box
+
 <p align="center">
   <img width="350px" src="https://raw.githubusercontent.com/yaotthaha/static/master/sideload.png">
 </p>
