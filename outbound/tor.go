@@ -160,13 +160,14 @@ func (t *Tor) start() error {
 			return
 		}
 		if len(info) != 1 || info[0].Key != "net/listeners/socks" {
-			t.logger.Error("get socks proxy address")
+			t.logger.Error("get tor socks proxy address fail")
 			return
 		}
 		t.logger.Trace("obtained tor socks5 address ", info[0].Val)
 		// TODO: set password for tor socks5 server if supported
 		t.socksClient = socks.NewClient(N.SystemDialer, M.ParseSocksaddr(info[0].Val), socks.Version5, "", "")
 		t.bootDone.Store(true)
+		t.logger.Info("tor started")
 	}()
 
 	return nil
@@ -210,7 +211,7 @@ func (t *Tor) Close() error {
 func (t *Tor) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	t.logger.InfoContext(ctx, "outbound connection to ", destination)
 	if !t.bootDone.Load() {
-		return nil, os.ErrNotExist
+		return nil, E.New("tor not started")
 	}
 	return t.socksClient.DialContext(ctx, network, destination)
 }
