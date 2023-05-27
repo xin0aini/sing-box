@@ -7,6 +7,7 @@ import (
 	"net"
 	"os/exec"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -29,7 +30,9 @@ type SideLoad struct {
 	dialer          N.Dialer
 	socksClient     *socks.Client
 	dialerForwarder *D.DialerForwarder
-	command         *exec.Cmd
+	options         option.SideLoadOutboundOptions
+	command         atomic.Pointer[exec.Cmd]
+	isClose         atomic.Bool
 }
 
 func NewSideLoad(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.SideLoadOutboundOptions) (*SideLoad, error) {
@@ -55,8 +58,10 @@ func NewSideLoad(ctx context.Context, router adapter.Router, logger log.ContextL
 	}
 	serverSocksAddr := M.ParseSocksaddrHostPort("127.0.0.1", options.Socks5ProxyPort)
 	outbound.socksClient = socks.NewClient(N.SystemDialer, serverSocksAddr, socks.Version5, "", "")
-	outbound.command = exec.CommandContext(ctx, options.Command[0], options.Command[1:]...)
-	outbound.command.Env = options.Env
+	command := exec.CommandContext(ctx, options.Command[0], options.Command[1:]...)
+	command.Env = options.Env
+	outbound.command.Store(command)
+	outbound.options = options
 	return outbound, nil
 }
 
@@ -67,17 +72,19 @@ func (s *SideLoad) Start() error {
 			return err
 		}
 	}
-	s.command.Stdout = newSideLoadLogWriter(s.logger.Info)
-	s.command.Stderr = newSideLoadLogWriter(s.logger.Info)
-	err := s.command.Start()
+	s.command.Load().Stdout = newSideLoadLogWriter(s.logger.Info)
+	s.command.Load().Stderr = newSideLoadLogWriter(s.logger.Info)
+	err := s.command.Load().Start()
 	if err != nil {
 		return err
 	}
+	go s.keepCommand()
 	return nil
 }
 
 func (s *SideLoad) Close() error {
-	err := s.command.Process.Kill()
+	s.isClose.Store(true)
+	err := s.command.Load().Process.Kill()
 	if err != nil {
 		return err
 	}
@@ -88,6 +95,48 @@ func (s *SideLoad) Close() error {
 		}
 	}
 	return nil
+}
+
+func (s *SideLoad) keepCommand() {
+	for {
+		waitCtx, waitCancel := context.WithCancel(s.ctx)
+		go func() {
+			defer waitCancel()
+			s.command.Load().Wait()
+		}()
+		select {
+		case <-waitCtx.Done():
+			if command := s.command.Load(); command != nil && command.ProcessState != nil && command.ProcessState.Exited() {
+				if s.isClose.Load() {
+					return
+				}
+				s.logger.Error("command stop, restart...")
+				var newCommand *exec.Cmd
+				for {
+					select {
+					case <-time.After(3 * time.Second):
+						newCommand = exec.CommandContext(s.ctx, s.options.Command[0], s.options.Command[1:]...)
+						newCommand.Env = s.options.Env
+						newCommand.Stdout = newSideLoadLogWriter(s.logger.Info)
+						newCommand.Stderr = newSideLoadLogWriter(s.logger.Info)
+						err := newCommand.Start()
+						if err != nil {
+							newCommand.Process.Kill()
+							s.logger.Error("restart command error: ", err, ", retry")
+							continue
+						}
+					case <-s.ctx.Done():
+						return
+					}
+					break
+				}
+				s.command.Store(newCommand)
+				s.logger.Info("restart command success")
+			}
+		case <-s.ctx.Done():
+			return
+		}
+	}
 }
 
 func (s *SideLoad) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
