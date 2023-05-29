@@ -35,7 +35,8 @@ func getProviders(server *Server, router adapter.Router) func(w http.ResponseWri
 		var proxyMap badjson.JSONObject
 		pps := router.ListProxyProvider()
 		if pps == nil {
-			render.NoContent(w, r)
+			render.Status(r, http.StatusNotFound)
+			render.JSON(w, r, ErrNotFound)
 			return
 		}
 		for _, v := range router.ListProxyProvider() {
