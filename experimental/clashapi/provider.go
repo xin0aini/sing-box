@@ -52,7 +52,7 @@ func getProvider(server *Server, router adapter.Router) func(w http.ResponseWrit
 	render.JSON(w, r, provider)*/
 	//render.NoContent(w, r)
 	return func(w http.ResponseWriter, r *http.Request) {
-		proxyProvider := r.Context().Value(CtxKeyProxy).(adapter.ProxyProvider)
+		proxyProvider := r.Context().Value(CtxKeyProvider).(adapter.ProxyProvider)
 		response, err := json.Marshal(proxyProviderInfo(server, router, proxyProvider))
 		if err != nil {
 			render.Status(r, http.StatusInternalServerError)
