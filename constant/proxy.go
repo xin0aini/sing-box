@@ -21,7 +21,6 @@ const (
 	TypeShadowTLS    = "shadowtls"
 	TypeShadowsocksR = "shadowsocksr"
 	TypeVLESS        = "vless"
-	TypeBadsocks     = "badsocks"
 	TypeSideLoad     = "sideload"
 )
 

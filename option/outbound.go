@@ -23,7 +23,6 @@ type _Outbound struct {
 	ShadowTLSOptions    ShadowTLSOutboundOptions    `json:"-"`
 	ShadowsocksROptions ShadowsocksROutboundOptions `json:"-"`
 	VLESSOptions        VLESSOutboundOptions        `json:"-"`
-	BadsocksOptions     BadsocksOutboundOptions     `json:"-"`
 	SideLoadOptions     SideLoadOutboundOptions     `json:"-"`
 	SelectorOptions     SelectorOutboundOptions     `json:"-"`
 	URLTestOptions      URLTestOutboundOptions      `json:"-"`
@@ -62,8 +61,6 @@ func (h Outbound) MarshalJSON() ([]byte, error) {
 		v = h.ShadowsocksROptions
 	case C.TypeVLESS:
 		v = h.VLESSOptions
-	case C.TypeBadsocks:
-		v = h.BadsocksOptions
 	case C.TypeSideLoad:
 		v = h.SideLoadOptions
 	case C.TypeSelector:
@@ -111,8 +108,6 @@ func (h *Outbound) UnmarshalJSON(bytes []byte) error {
 		v = &h.ShadowsocksROptions
 	case C.TypeVLESS:
 		v = &h.VLESSOptions
-	case C.TypeBadsocks:
-		v = &h.BadsocksOptions
 	case C.TypeSideLoad:
 		v = &h.SideLoadOptions
 	case C.TypeSelector:

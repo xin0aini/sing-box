@@ -28,8 +28,8 @@ require (
 	github.com/sagernet/sing-dns v0.1.5-0.20230426113254-25d948c44223
 	github.com/sagernet/sing-mux v0.0.0-20230517134606-1ebe6bb26646
 	github.com/sagernet/sing-shadowsocks v0.2.2-0.20230509053848-d83f8fe1194c
-	github.com/sagernet/sing-shadowsocks2 v0.0.0-20230520015001-d3fb9a6fbc61
-	github.com/sagernet/sing-shadowtls v0.1.2-0.20230417103049-4f682e05f19b
+	github.com/sagernet/sing-shadowsocks2 v0.0.0-20230605050515-45409ce8283d
+	github.com/sagernet/sing-shadowtls v0.1.2-0.20230531025805-ebadc7615da3
 	github.com/sagernet/sing-tun v0.1.5-0.20230520041100-b02f2529160e
 	github.com/sagernet/sing-vmess v0.1.5-0.20230417103030-8c3070ae3fb3
 	github.com/sagernet/smux v0.0.0-20230312102458-337ec2a5af37
@@ -49,7 +49,6 @@ require (
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20230429144221-925a1e7659e6
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.30.0
-	gopkg.in/yaml.v3 v3.0.1
 	gvisor.dev/gvisor v0.0.0-20230415003630-3981d5d5e523
 )
 
@@ -94,5 +93,6 @@ require (
 	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )
