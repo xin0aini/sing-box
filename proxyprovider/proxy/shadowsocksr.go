@@ -16,10 +16,12 @@ type proxyClashShadowsocksR struct {
 	Cipher   string `yaml:"cipher,omitempty"`
 	Password string `yaml:"password,omitempty"`
 	//
-	Obfs          string `yaml:"obfs,omitempty"`
-	ObfsParam     string `yaml:"obfs-param,omitempty"`
-	Protocol      string `yaml:"protocol,omitempty"`
-	ProtocolParam string `yaml:"protocol-param,omitempty"`
+	Obfs             string `yaml:"obfs,omitempty"`
+	ObfsParam        string `yaml:"obfs-param,omitempty"`
+	ObfsParamOld     string `yaml:"obfsparam,omitempty"` // clashR old field support
+	Protocol         string `yaml:"protocol,omitempty"`
+	ProtocolParam    string `yaml:"protocol-param,omitempty"`
+	ProtocolParamOld string `yaml:"protocolparam,omitempty"` // clashR old field support
 	//
 	UDP bool `yaml:"udp,omitempty"`
 }

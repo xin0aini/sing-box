@@ -29,6 +29,14 @@ func (p *ProxyShadowsocksR) GenerateOptions() (*option.Outbound, error) {
 		},
 	}
 
+	// clashR old field support
+	if opt.ShadowsocksROptions.ObfsParam == "" {
+		opt.ShadowsocksROptions.ObfsParam = p.clashOptions.ObfsParamOld
+	}
+	if opt.ShadowsocksROptions.ProtocolParam == "" {
+		opt.ShadowsocksROptions.ProtocolParam = p.clashOptions.ProtocolParamOld
+	}
+
 	if !p.clashOptions.UDP {
 		opt.ShadowsocksROptions.Network = N.NetworkTCP
 	}
