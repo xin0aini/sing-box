@@ -37,7 +37,7 @@ func (p *ProxyShadowsocksR) GenerateOptions() (*option.Outbound, error) {
 		opt.ShadowsocksROptions.ProtocolParam = p.clashOptions.ProtocolParamOld
 	}
 
-	if !p.clashOptions.UDP {
+	if p.clashOptions.UDP != nil && !*p.clashOptions.UDP {
 		opt.ShadowsocksROptions.Network = N.NetworkTCP
 	}
 

@@ -19,7 +19,7 @@ type proxyClashVMess struct {
 	UUID                string `yaml:"uuid"`
 	AlterID             int    `yaml:"alterId"`
 	Cipher              string `yaml:"cipher"`
-	UDP                 bool   `yaml:"udp,omitempty"`
+	UDP                 *bool  `yaml:"udp,omitempty"`
 	TLS                 bool   `yaml:"tls,omitempty"`
 	SkipCertVerify      bool   `yaml:"skip-cert-verify,omitempty"`
 	Fingerprint         string `yaml:"fingerprint,omitempty"`
@@ -96,7 +96,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 		},
 	}
 
-	if !p.clashOptions.UDP {
+	if p.clashOptions.UDP != nil && !*p.clashOptions.UDP {
 		opt.VMessOptions.Network = N.NetworkTCP
 	}
 

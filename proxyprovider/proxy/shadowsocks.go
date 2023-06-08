@@ -19,8 +19,8 @@ type proxyClashShadowsocks struct {
 	Cipher   string `yaml:"cipher,omitempty"`
 	Password string `yaml:"password,omitempty"`
 	//
-	UDP        bool `yaml:"udp,omitempty"`
-	UDPOverTCP bool `yaml:"udp-over-tcp,omitempty"`
+	UDP        *bool `yaml:"udp,omitempty"`
+	UDPOverTCP bool  `yaml:"udp-over-tcp,omitempty"`
 }
 
 type ProxyShadowsocks struct {
@@ -80,7 +80,7 @@ func (p *ProxyShadowsocks) GenerateOptions() (*option.Outbound, error) {
 		},
 	}
 
-	if !p.clashOptions.UDP {
+	if p.clashOptions.UDP != nil && !*p.clashOptions.UDP {
 		opt.ShadowsocksOptions.Network = N.NetworkTCP
 	}
 

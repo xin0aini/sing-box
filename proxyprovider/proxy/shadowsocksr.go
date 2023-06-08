@@ -23,7 +23,7 @@ type proxyClashShadowsocksR struct {
 	ProtocolParam    string `yaml:"protocol-param,omitempty"`
 	ProtocolParamOld string `yaml:"protocolparam,omitempty"` // clashR old field support
 	//
-	UDP bool `yaml:"udp,omitempty"`
+	UDP *bool `yaml:"udp,omitempty"`
 }
 
 type ProxyShadowsocksR struct {

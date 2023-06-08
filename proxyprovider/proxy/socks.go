@@ -23,7 +23,7 @@ type proxyClashSocks struct {
 	SkipCertVerify bool   `yaml:"skip-cert-verify,omitempty"`
 	FingerPrint    string `yaml:"fingerprint,omitempty"`
 	//
-	UDP bool `yaml:"udp,omitempty"`
+	UDP *bool `yaml:"udp,omitempty"`
 }
 
 type ProxySocks struct {
@@ -84,7 +84,7 @@ func (p *ProxySocks) GenerateOptions() (*option.Outbound, error) {
 		},
 	}
 
-	if !p.clashOptions.UDP {
+	if p.clashOptions.UDP != nil && !*p.clashOptions.UDP {
 		opt.SocksOptions.Network = N.NetworkTCP
 	}
 

@@ -24,7 +24,7 @@ type proxyClashTrojan struct {
 	FingerPrint       string   `yaml:"fingerprint,omitempty"`
 	ClientFingerPrint string   `yaml:"client-fingerprint,omitempty"`
 	//
-	UDP bool `yaml:"udp,omitempty"`
+	UDP *bool `yaml:"udp,omitempty"`
 	//
 	Network     string                 `yaml:"network,omitempty"`
 	Flow        string                 `yaml:"flow,omitempty"`
@@ -112,7 +112,7 @@ func (p *ProxyTrojan) GenerateOptions() (*option.Outbound, error) {
 		}
 	}
 
-	if !p.clashOptions.UDP {
+	if p.clashOptions.UDP != nil && !*p.clashOptions.UDP {
 		opt.TrojanOptions.Network = N.NetworkTCP
 	}
 
