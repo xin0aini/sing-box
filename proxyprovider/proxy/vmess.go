@@ -50,7 +50,7 @@ func (p *ProxyVMess) Tag() string {
 		p.tag = p.clashOptions.Name
 	}
 	if p.tag == "" {
-		p.tag = net.JoinHostPort(p.clashOptions.Server, strconv.Itoa(int(p.clashOptions.ServerPort)))
+		p.tag = net.JoinHostPort(p.clashOptions.Server, p.clashOptions.ServerPort.Value)
 	}
 	return p.tag
 }
@@ -77,13 +77,18 @@ func (p *ProxyVMess) SetDialerOptions(dialer option.DialerOptions) {
 }
 
 func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
+	serverPort, err := strconv.ParseUint(p.clashOptions.ServerPort.Value, 10, 16)
+	if err != nil {
+		return nil, E.Cause(err, "fail to parse port")
+	}
+
 	opt := &option.Outbound{
 		Tag:  p.Tag(),
 		Type: C.TypeVMess,
 		VMessOptions: option.VMessOutboundOptions{
 			ServerOptions: option.ServerOptions{
 				Server:     p.clashOptions.Server,
-				ServerPort: p.clashOptions.ServerPort,
+				ServerPort: uint16(serverPort),
 			},
 			UUID:                p.clashOptions.UUID,
 			Security:            p.clashOptions.Cipher,

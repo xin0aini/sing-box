@@ -3,20 +3,28 @@
 package proxy
 
 import (
+	"strconv"
+
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
 	dns "github.com/sagernet/sing-dns"
+	E "github.com/sagernet/sing/common/exceptions"
 	N "github.com/sagernet/sing/common/network"
 )
 
 func (p *ProxyShadowsocksR) GenerateOptions() (*option.Outbound, error) {
+	serverPort, err := strconv.ParseUint(p.clashOptions.ServerPort.Value, 10, 16)
+	if err != nil {
+		return nil, E.Cause(err, "fail to parse port")
+	}
+
 	opt := &option.Outbound{
 		Tag:  p.Tag(),
 		Type: C.TypeShadowsocksR,
 		ShadowsocksROptions: option.ShadowsocksROutboundOptions{
 			ServerOptions: option.ServerOptions{
 				Server:     p.clashOptions.Server,
-				ServerPort: p.clashOptions.ServerPort,
+				ServerPort: uint16(serverPort),
 			},
 			Method:        p.clashOptions.Cipher,
 			Password:      p.clashOptions.Password,

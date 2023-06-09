@@ -4,6 +4,8 @@ package proxy
 
 import (
 	E "github.com/sagernet/sing/common/exceptions"
+
+	"gopkg.in/yaml.v3"
 )
 
 type ClashConfig struct {
@@ -20,10 +22,10 @@ const (
 )
 
 type proxyClashDefault struct {
-	Name       string `yaml:"name"`
-	Type       string `yaml:"type"`
-	Server     string `yaml:"server"`
-	ServerPort uint16 `yaml:"port"`
+	Name       string    `yaml:"name"`
+	Type       string    `yaml:"type"`
+	Server     string    `yaml:"server"`
+	ServerPort yaml.Node `yaml:"port"`
 	//
 	IPVersion string `yaml:"ip-version,omitempty"`
 }
@@ -64,25 +66,6 @@ func (p *ProxyClashOptions) UnmarshalYAML(unmarshal func(any) error) error {
 	default:
 		// return E.New("unsupported clash proxy type: ", raw.Type)
 		return nil
-	}
-}
-
-func (p *ProxyClashOptions) MarshalYAML() (any, error) {
-	switch p.Type {
-	case ClashTypeHTTP:
-		return p.HTTPOptions, nil
-	case ClashTypeSocks5:
-		return p.SocksOptions, nil
-	case ClashTypeShadowsocks:
-		return p.ShadowsocksOptions, nil
-	case ClashTypeShadowsocksR:
-		return p.ShadowsocksROptions, nil
-	case ClashTypeVMess:
-		return p.VMessOptions, nil
-	case ClashTypeTrojan:
-		return p.TrojanOptions, nil
-	default:
-		return nil, E.New("unsupported clash proxy type: ", p.Type)
 	}
 }
 

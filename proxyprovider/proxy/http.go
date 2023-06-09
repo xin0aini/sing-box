@@ -35,7 +35,7 @@ func (p *ProxyHTTP) Tag() string {
 		p.tag = p.clashOptions.Name
 	}
 	if p.tag == "" {
-		p.tag = net.JoinHostPort(p.clashOptions.Server, strconv.Itoa(int(p.clashOptions.ServerPort)))
+		p.tag = net.JoinHostPort(p.clashOptions.Server, p.clashOptions.ServerPort.Value)
 	}
 	return p.tag
 }
@@ -62,13 +62,18 @@ func (p *ProxyHTTP) SetDialerOptions(dialer option.DialerOptions) {
 }
 
 func (p *ProxyHTTP) GenerateOptions() (*option.Outbound, error) {
+	serverPort, err := strconv.ParseUint(p.clashOptions.ServerPort.Value, 10, 16)
+	if err != nil {
+		return nil, E.Cause(err, "fail to parse port")
+	}
+
 	opt := &option.Outbound{
 		Tag:  p.Tag(),
 		Type: C.TypeHTTP,
 		HTTPOptions: option.HTTPOutboundOptions{
 			ServerOptions: option.ServerOptions{
 				Server:     p.clashOptions.Server,
-				ServerPort: p.clashOptions.ServerPort,
+				ServerPort: uint16(serverPort),
 			},
 			Username: p.clashOptions.Username,
 			Password: p.clashOptions.Password,

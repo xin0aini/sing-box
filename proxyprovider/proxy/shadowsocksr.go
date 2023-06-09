@@ -4,7 +4,6 @@ package proxy
 
 import (
 	"net"
-	"strconv"
 
 	C "github.com/sagernet/sing-box/constant"
 	"github.com/sagernet/sing-box/option"
@@ -37,7 +36,7 @@ func (p *ProxyShadowsocksR) Tag() string {
 		p.tag = p.clashOptions.Name
 	}
 	if p.tag == "" {
-		p.tag = net.JoinHostPort(p.clashOptions.Server, strconv.Itoa(int(p.clashOptions.ServerPort)))
+		p.tag = net.JoinHostPort(p.clashOptions.Server, p.clashOptions.ServerPort.Value)
 	}
 	return p.tag
 }

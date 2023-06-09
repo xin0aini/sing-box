@@ -46,7 +46,7 @@ func (p *ProxyTrojan) Tag() string {
 		p.tag = p.clashOptions.Name
 	}
 	if p.tag == "" {
-		p.tag = net.JoinHostPort(p.clashOptions.Server, strconv.Itoa(int(p.clashOptions.ServerPort)))
+		p.tag = net.JoinHostPort(p.clashOptions.Server, p.clashOptions.ServerPort.Value)
 	}
 	return p.tag
 }
@@ -77,13 +77,18 @@ func (p *ProxyTrojan) GenerateOptions() (*option.Outbound, error) {
 		return nil, E.New("trojan flow is not supported in sing-box")
 	}
 
+	serverPort, err := strconv.ParseUint(p.clashOptions.ServerPort.Value, 10, 16)
+	if err != nil {
+		return nil, E.Cause(err, "fail to parse port")
+	}
+
 	opt := &option.Outbound{
 		Tag:  p.Tag(),
 		Type: C.TypeTrojan,
 		TrojanOptions: option.TrojanOutboundOptions{
 			ServerOptions: option.ServerOptions{
 				Server:     p.clashOptions.Server,
-				ServerPort: p.clashOptions.ServerPort,
+				ServerPort: uint16(serverPort),
 			},
 			Password: p.clashOptions.Password,
 			TLS: &option.OutboundTLSOptions{
