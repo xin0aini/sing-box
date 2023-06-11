@@ -210,6 +210,8 @@ func (g *URLTestGroup) Select(network string) adapter.Outbound {
 	var minDelay uint16
 	var minTime time.Time
 	var minOutbound adapter.Outbound
+	var fallbackIgnoreOutboundDelay uint16
+	var fallbackIgnoreOutbound adapter.Outbound
 	for _, detour := range g.outbounds {
 		if !common.Contains(detour.Network(), network) {
 			continue
@@ -219,6 +221,10 @@ func (g *URLTestGroup) Select(network string) adapter.Outbound {
 			continue
 		}
 		if g.fallback.enabled && g.fallback.maxDelay > 0 && history.Delay > g.fallback.maxDelay {
+			if fallbackIgnoreOutboundDelay == 0 || history.Delay < fallbackIgnoreOutboundDelay {
+				fallbackIgnoreOutboundDelay = history.Delay
+				fallbackIgnoreOutbound = detour
+			}
 			continue
 		}
 		if minDelay == 0 || minDelay > history.Delay+g.tolerance || minDelay > history.Delay-g.tolerance && minTime.Before(history.Time) {
@@ -229,6 +235,9 @@ func (g *URLTestGroup) Select(network string) adapter.Outbound {
 				break
 			}
 		}
+	}
+	if minOutbound == nil && fallbackIgnoreOutbound != nil {
+		return fallbackIgnoreOutbound
 	}
 	if minOutbound == nil {
 		for _, detour := range g.outbounds {
