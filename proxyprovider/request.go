@@ -27,6 +27,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const requestTimeout = 10 * time.Second
+
 func (p *ProxyProvider) update() error {
 	cache, cacheTime, cacheErr := p.readCache()
 	if cacheErr == nil {
@@ -246,6 +248,13 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 		}
 	}
 
+	var reqTimeout time.Duration
+	if p.options.RequestTimeout > 0 {
+		reqTimeout = time.Duration(p.options.RequestTimeout)
+	} else {
+		reqTimeout = requestTimeout
+	}
+
 	if p.options.HTTP3 {
 		h3Client := &http.Client{
 			Transport: &http3.RoundTripper{
@@ -259,7 +268,7 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 				},
 			},
 		}
-		reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*10)
+		reqCtx, reqCancel := context.WithTimeout(p.ctx, reqTimeout)
 		defer reqCancel()
 		reqWithCtx := req.Clone(context.Background())
 		reqWithCtx = reqWithCtx.WithContext(reqCtx)
@@ -284,7 +293,7 @@ func (p *ProxyProvider) httpRequest(req *http.Request) (http.Header, []byte, err
 		},
 	}
 
-	reqCtx, reqCancel := context.WithTimeout(p.ctx, time.Second*10)
+	reqCtx, reqCancel := context.WithTimeout(p.ctx, reqTimeout)
 	defer reqCancel()
 	reqWithCtx := req.Clone(context.Background())
 	reqWithCtx = reqWithCtx.WithContext(reqCtx)

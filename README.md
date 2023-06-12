@@ -50,6 +50,7 @@ with this application without prior consent.
             "url": "https://www.google.com", // 订阅链接，必填，仅支持Clash订阅链接
             "cache_file": "/tmp/proxy-provider-x.cache", // 缓存文件，选填，强烈建议填写，可以加快启动速度
             "force_update": "4h", // 强制更新间隔，选填，若当前缓存文件已经超过该时间，将会强制更新
+            "request_timeout": "10s", // 订阅请求超时时间，选填，若不填写，将会使用默认超时时间 10s，格式：Golang time.Duration，如 10s, 1m, 1h, 1h30m, 1h30m30s
             "ip": "1.1.1.1", // 请求的IP，选填，若不填写，将会使用DNS字段中的DNS服务器
             "http3": true, // 是否使用HTTP/3，选填，实验性，可能会有奇怪的问题，对于节点订阅地址使用了CloudFlare CDN（或者支持HTTP/3的服务器），可以尝试开启
             "dns": "tcp://223.5.5.5", // 请求的DNS服务器，选填，若不填写，将会选择默认DNS，支持(udp/tcp/dot/doh/doh3/doq)
@@ -107,6 +108,10 @@ sing-box show-proxyprovider [-t 可指定proxy-provider tag, 支持多个tag]
 - quic://94.140.14.140{:784} （使用94.140.14.140，784端口 QUIC DNS）
 
 * 不允许使用基于域名的DNS。使用基于域名的DNS服务器，依然需要使用基于IP的DNS服务器作为解析域名的DNS服务器
+
+4. 若订阅地址响应慢，可以自行设置 request_timeout 字段，指定请求超时时间，设置为空则默认 10s 请求超时，格式：Golang time.Duration，如 10s, 1m, 1h, 1h30m, 1h30m30s
+
+5. 若订阅地址响应慢，不建议设置 force_update，否则会导致订阅更新失败而无法启动。可以在定时机制中（如 Linux Crontab、Windows 计划任务）设置定期执行 sing-box update-proxyprovider [-c 配置文件] [-t 指定 proxyprovider tag] 强制更新（无视 force_update 规则），即使更新失败，sing-box 依照沿用旧的订阅信息启动
 ```
 
 #### 2. 内嵌Yacd-Meta面板 (with_clash_ui)

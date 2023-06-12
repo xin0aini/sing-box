@@ -14,6 +14,7 @@ type ProxyProviderOptions struct {
 	CacheFile            string                                    `json:"cache_file,omitempty"`
 	ForceUpdate          Duration                                  `json:"force_update,omitempty"`
 	HTTP3                bool                                      `json:"http3,omitempty"`
+	RequestTimeout       Duration                                  `json:"request_timeout,omitempty"`
 	RequestIP            *netip.Addr                               `json:"ip,omitempty"`
 	DNS                  string                                    `json:"dns,omitempty"`
 	Filter               *ProxyProviderFilterOptions               `json:"filter,omitempty"`
