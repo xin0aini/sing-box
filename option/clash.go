@@ -28,6 +28,6 @@ type URLTestOutboundOptions struct {
 }
 
 type URLTestFallbackOptions struct {
-	Enabled  bool   `json:"enabled,omitempty"`
-	MaxDelay uint16 `json:"max_delay,omitempty"`
+	Enabled  bool     `json:"enabled,omitempty"`
+	MaxDelay Duration `json:"max_delay,omitempty"`
 }

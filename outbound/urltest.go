@@ -37,6 +37,11 @@ type URLTest struct {
 	group     *URLTestGroup
 }
 
+type URLTestFallback struct {
+	enabled  bool
+	maxDelay uint16
+}
+
 func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.URLTestOutboundOptions) (*URLTest, error) {
 	outbound := &URLTest{
 		myOutboundAdapter: myOutboundAdapter{
@@ -54,7 +59,7 @@ func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLo
 	if options.Fallback.Enabled {
 		outbound.fallback = URLTestFallback{
 			enabled:  true,
-			maxDelay: options.Fallback.MaxDelay,
+			maxDelay: uint16(time.Duration(options.Fallback.MaxDelay).Milliseconds()),
 		}
 	}
 	if len(outbound.tags) == 0 {
@@ -340,9 +345,4 @@ func (g *URLTestGroup) urlTest(ctx context.Context, link string, force bool) (ma
 	}
 	b.Wait()
 	return result, nil
-}
-
-type URLTestFallback struct {
-	enabled  bool
-	maxDelay uint16
 }
