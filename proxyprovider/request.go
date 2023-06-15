@@ -104,7 +104,7 @@ func (p *ProxyProvider) parseToPeerList() error {
 	p.subscriptionRawDataLock.RUnlock()
 	err := yaml.Unmarshal(PeerInfo, &clashConfig)
 	if err != nil {
-		return p.parseToPeerListFormLink()
+		return E.Cause(err, "failed to parse proxy")
 	}
 	if clashConfig.Proxies == nil || len(clashConfig.Proxies) == 0 {
 		return E.New("proxy not found")
@@ -128,10 +128,6 @@ func (p *ProxyProvider) parseToPeerList() error {
 	p.peerList = proxies
 
 	return nil
-}
-
-func (p *ProxyProvider) parseToPeerListFormLink() error {
-	return E.New("failed to parse proxy from link")
 }
 
 func (p *ProxyProvider) readCache() (*subscriptionRawData, time.Time, error) {
