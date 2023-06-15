@@ -53,7 +53,6 @@ type Router struct {
 	proxyProviderByTag                 map[string]adapter.ProxyProvider
 	proxyProviderOutbounds             map[string][]adapter.Outbound
 	rules                              []adapter.Rule
-	ipRules                            []adapter.IPRule
 	defaultDetour                      string
 	defaultOutboundForConnection       adapter.Outbound
 	defaultOutboundForPacketConnection adapter.Outbound
@@ -102,7 +101,6 @@ func NewRouter(
 		dnsLogger:             logFactory.NewLogger("dns"),
 		outboundByTag:         make(map[string]adapter.Outbound),
 		rules:                 make([]adapter.Rule, 0, len(options.Rules)),
-		ipRules:               make([]adapter.IPRule, 0, len(options.IPRules)),
 		dnsRules:              make([]adapter.DNSRule, 0, len(dnsOptions.Rules)),
 		needGeoIPDatabase:     hasRule(options.Rules, isGeoIPRule) || hasDNSRule(dnsOptions.Rules, isGeoIPDNSRule),
 		needGeositeDatabase:   hasRule(options.Rules, isGeositeRule) || hasDNSRule(dnsOptions.Rules, isGeositeDNSRule),
@@ -128,13 +126,6 @@ func NewRouter(
 			return nil, E.Cause(err, "parse rule[", i, "]")
 		}
 		router.rules = append(router.rules, routeRule)
-	}
-	for i, ipRuleOptions := range options.IPRules {
-		ipRule, err := NewIPRule(router, router.logger, ipRuleOptions)
-		if err != nil {
-			return nil, E.Cause(err, "parse ip rule[", i, "]")
-		}
-		router.ipRules = append(router.ipRules, ipRule)
 	}
 	for i, dnsRuleOptions := range dnsOptions.Rules {
 		dnsRule, err := NewDNSRule(router, router.logger, dnsRuleOptions)
@@ -649,6 +640,7 @@ func (r *Router) RouteConnection(ctx context.Context, conn net.Conn, metadata ad
 			Fqdn: domain,
 			Port: metadata.Destination.Port,
 		}
+		metadata.FakeIP = true
 		r.logger.DebugContext(ctx, "found fakeip domain: ", domain)
 	}
 
@@ -758,6 +750,7 @@ func (r *Router) RoutePacketConnection(ctx context.Context, conn N.PacketConn, m
 			Fqdn: domain,
 			Port: metadata.Destination.Port,
 		}
+		metadata.FakeIP = true
 		r.logger.DebugContext(ctx, "found fakeip domain: ", domain)
 	}
 
@@ -938,10 +931,6 @@ func (r *Router) DefaultMark() int {
 
 func (r *Router) Rules() []adapter.Rule {
 	return r.rules
-}
-
-func (r *Router) IPRules() []adapter.IPRule {
-	return r.ipRules
 }
 
 func (r *Router) NetworkMonitor() tun.NetworkUpdateMonitor {

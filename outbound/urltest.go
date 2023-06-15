@@ -45,10 +45,11 @@ type URLTestFallback struct {
 func NewURLTest(ctx context.Context, router adapter.Router, logger log.ContextLogger, tag string, options option.URLTestOutboundOptions) (*URLTest, error) {
 	outbound := &URLTest{
 		myOutboundAdapter: myOutboundAdapter{
-			protocol: C.TypeURLTest,
-			router:   router,
-			logger:   logger,
-			tag:      tag,
+			protocol:     C.TypeURLTest,
+			router:       router,
+			logger:       logger,
+			tag:          tag,
+			dependencies: options.Outbounds,
 		},
 		ctx:       ctx,
 		tags:      options.Outbounds,
