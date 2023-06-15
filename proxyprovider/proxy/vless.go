@@ -1,5 +1,3 @@
-//go:build with_proxyprovider
-
 package proxy
 
 import (
@@ -13,21 +11,21 @@ import (
 	N "github.com/sagernet/sing/common/network"
 )
 
-type proxyClashVMess struct {
+type proxyClashVLESS struct {
 	proxyClashDefault `yaml:",inline"`
 	//
-	UUID                string `yaml:"uuid"`
-	AlterID             int    `yaml:"alterId"`
-	Cipher              string `yaml:"cipher"`
-	UDP                 *bool  `yaml:"udp,omitempty"`
-	TLS                 bool   `yaml:"tls,omitempty"`
-	SkipCertVerify      bool   `yaml:"skip-cert-verify,omitempty"`
-	Fingerprint         string `yaml:"fingerprint,omitempty"`
-	ClientFingerprint   string `yaml:"client-fingerprint,omitempty"`
-	ServerName          string `yaml:"servername,omitempty"`
-	PacketEncoding      string `yaml:"packet-encoding,omitempty"`
-	GlobalPadding       bool   `yaml:"global-padding,omitempty"`
-	AuthenticatedLength bool   `yaml:"authenticated-length,omitempty"`
+	UUID              string  `yaml:"uuid"`
+	Flow              string  `yaml:"flow"`
+	FlowShow          string  `yaml:"flow-show"`
+	UDP               *bool   `yaml:"udp,omitempty"`
+	PacketAddr        bool    `yaml:"packet-addr,omitempty"`
+	XUDP              bool    `yaml:"xudp,omitempty"`
+	TLS               bool    `yaml:"tls,omitempty"`
+	SkipCertVerify    bool    `yaml:"skip-cert-verify,omitempty"`
+	Fingerprint       string  `yaml:"fingerprint,omitempty"`
+	ClientFingerprint string  `yaml:"client-fingerprint,omitempty"`
+	ServerName        string  `yaml:"servername,omitempty"`
+	PacketEncoding    *string `yaml:"packet-encoding,omitempty"`
 	//
 	Network string `yaml:"network,omitempty"`
 	//
@@ -39,13 +37,13 @@ type proxyClashVMess struct {
 	RealityOptions *proxyClashRealityOptions `yaml:"reality-opts,omitempty"`
 }
 
-type ProxyVMess struct {
+type ProxyVLESS struct {
 	tag           string
-	clashOptions  *proxyClashVMess
+	clashOptions  *proxyClashVLESS
 	dialerOptions option.DialerOptions
 }
 
-func (p *ProxyVMess) Tag() string {
+func (p *ProxyVLESS) Tag() string {
 	if p.tag == "" {
 		p.tag = p.clashOptions.Name
 	}
@@ -55,12 +53,12 @@ func (p *ProxyVMess) Tag() string {
 	return p.tag
 }
 
-func (p *ProxyVMess) Type() string {
-	return C.TypeVMess
+func (p *ProxyVLESS) Type() string {
+	return C.TypeVLESS
 }
 
-func (p *ProxyVMess) SetClashOptions(options any) bool {
-	clashOptions, ok := options.(proxyClashVMess)
+func (p *ProxyVLESS) SetClashOptions(options any) bool {
+	clashOptions, ok := options.(proxyClashVLESS)
 	if !ok {
 		return false
 	}
@@ -68,41 +66,50 @@ func (p *ProxyVMess) SetClashOptions(options any) bool {
 	return true
 }
 
-func (p *ProxyVMess) GetClashType() string {
+func (p *ProxyVLESS) GetClashType() string {
 	return p.clashOptions.Type
 }
 
-func (p *ProxyVMess) SetDialerOptions(dialer option.DialerOptions) {
+func (p *ProxyVLESS) SetDialerOptions(dialer option.DialerOptions) {
 	p.dialerOptions = dialer
 }
 
-func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
+func (p *ProxyVLESS) GenerateOptions() (*option.Outbound, error) {
 	serverPort, err := strconv.ParseUint(p.clashOptions.ServerPort.Value, 10, 16)
 	if err != nil {
 		return nil, E.Cause(err, "fail to parse port")
 	}
 
+	if p.clashOptions.FlowShow != "" {
+		return nil, E.New("flow-show is not supported")
+	}
+
 	opt := &option.Outbound{
 		Tag:  p.Tag(),
-		Type: C.TypeVMess,
-		VMessOptions: option.VMessOutboundOptions{
+		Type: C.TypeVLESS,
+		VLESSOptions: option.VLESSOutboundOptions{
 			ServerOptions: option.ServerOptions{
 				Server:     p.clashOptions.Server,
 				ServerPort: uint16(serverPort),
 			},
-			UUID:                p.clashOptions.UUID,
-			Security:            p.clashOptions.Cipher,
-			AlterId:             p.clashOptions.AlterID,
-			GlobalPadding:       p.clashOptions.GlobalPadding,
-			AuthenticatedLength: p.clashOptions.AuthenticatedLength,
-			PacketEncoding:      p.clashOptions.PacketEncoding,
-			//
+			UUID:          p.clashOptions.UUID,
+			Flow:          p.clashOptions.Flow,
 			DialerOptions: p.dialerOptions,
 		},
 	}
 
 	if p.clashOptions.UDP != nil && !*p.clashOptions.UDP {
-		opt.VMessOptions.Network = N.NetworkTCP
+		opt.VLESSOptions.Network = N.NetworkTCP
+	}
+
+	if p.clashOptions.PacketEncoding != nil {
+		*opt.VLESSOptions.PacketEncoding = *p.clashOptions.PacketEncoding
+	} else if p.clashOptions.XUDP {
+		opt.VLESSOptions.PacketEncoding = new(string)
+		*opt.VLESSOptions.PacketEncoding = "xudp"
+	} else if p.clashOptions.PacketAddr {
+		opt.VLESSOptions.PacketEncoding = new(string)
+		*opt.VLESSOptions.PacketEncoding = "packetaddr"
 	}
 
 	switch p.clashOptions.Network {
@@ -111,7 +118,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 			p.clashOptions.WSOptions = &proxyClashWSOptions{}
 		}
 
-		opt.VMessOptions.Transport = &option.V2RayTransportOptions{
+		opt.VLESSOptions.Transport = &option.V2RayTransportOptions{
 			Type: C.V2RayTransportTypeWebsocket,
 			WebsocketOptions: option.V2RayWebsocketOptions{
 				Path:                p.clashOptions.WSOptions.Path,
@@ -120,31 +127,31 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 			},
 		}
 
-		opt.VMessOptions.Transport.WebsocketOptions.Headers = make(map[string]option.Listable[string], 0)
+		opt.VLESSOptions.Transport.WebsocketOptions.Headers = make(map[string]option.Listable[string], 0)
 
 		if p.clashOptions.WSOptions.Headers != nil && len(p.clashOptions.WSOptions.Headers) > 0 {
 			for k, v := range p.clashOptions.WSOptions.Headers {
-				opt.VMessOptions.Transport.WebsocketOptions.Headers[k] = option.Listable[string]{v}
+				opt.VLESSOptions.Transport.WebsocketOptions.Headers[k] = option.Listable[string]{v}
 			}
 		}
 
-		if opt.VMessOptions.Transport.WebsocketOptions.Headers["Host"] == nil {
-			opt.VMessOptions.Transport.WebsocketOptions.Headers["Host"] = option.Listable[string]{p.clashOptions.Server}
+		if opt.VLESSOptions.Transport.WebsocketOptions.Headers["Host"] == nil {
+			opt.VLESSOptions.Transport.WebsocketOptions.Headers["Host"] = option.Listable[string]{p.clashOptions.Server}
 		}
 
 		if p.clashOptions.TLS {
-			opt.VMessOptions.TLS = &option.OutboundTLSOptions{
+			opt.VLESSOptions.TLS = &option.OutboundTLSOptions{
 				Enabled:    true,
 				ServerName: p.clashOptions.Server,
 				Insecure:   p.clashOptions.SkipCertVerify,
 			}
 
-			opt.VMessOptions.TLS.ALPN = []string{"http/1.1"}
+			opt.VLESSOptions.TLS.ALPN = []string{"http/1.1"}
 
 			if p.clashOptions.ServerName != "" {
-				opt.VMessOptions.TLS.ServerName = p.clashOptions.ServerName
-			} else if opt.VMessOptions.Transport.WebsocketOptions.Headers["Host"] != nil {
-				opt.VMessOptions.TLS.ServerName = opt.VMessOptions.Transport.WebsocketOptions.Headers["Host"][0]
+				opt.VLESSOptions.TLS.ServerName = p.clashOptions.ServerName
+			} else if opt.VLESSOptions.Transport.WebsocketOptions.Headers["Host"] != nil {
+				opt.VLESSOptions.TLS.ServerName = opt.VLESSOptions.Transport.WebsocketOptions.Headers["Host"][0]
 			}
 
 			if p.clashOptions.ClientFingerprint != "" {
@@ -152,7 +159,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 					return nil, E.New(`uTLS is not included in this build, rebuild with -tags with_utls`)
 				}
 
-				opt.VMessOptions.TLS.UTLS = &option.OutboundUTLSOptions{
+				opt.VLESSOptions.TLS.UTLS = &option.OutboundUTLSOptions{
 					Enabled:     true,
 					Fingerprint: p.clashOptions.ClientFingerprint,
 				}
@@ -163,7 +170,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 			p.clashOptions.HTTPOptions = &proxyClashHTTPOptions{}
 		}
 
-		opt.VMessOptions.Transport = &option.V2RayTransportOptions{
+		opt.VLESSOptions.Transport = &option.V2RayTransportOptions{
 			Type: C.V2RayTransportTypeHTTP,
 			HTTPOptions: option.V2RayHTTPOptions{
 				Method: p.clashOptions.HTTPOptions.Method,
@@ -171,43 +178,43 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 		}
 
 		if p.clashOptions.HTTPOptions.Headers != nil && len(p.clashOptions.HTTPOptions.Headers) > 0 {
-			opt.VMessOptions.Transport.HTTPOptions.Headers = make(map[string]option.Listable[string], 0)
+			opt.VLESSOptions.Transport.HTTPOptions.Headers = make(map[string]option.Listable[string], 0)
 			for k, v := range p.clashOptions.HTTPOptions.Headers {
-				opt.VMessOptions.Transport.HTTPOptions.Headers[k] = v
+				opt.VLESSOptions.Transport.HTTPOptions.Headers[k] = v
 			}
 
 			if p.clashOptions.HTTPOptions.Headers["Host"] != nil {
-				opt.VMessOptions.Transport.HTTPOptions.Host = p.clashOptions.HTTPOptions.Headers["Host"]
+				opt.VLESSOptions.Transport.HTTPOptions.Host = p.clashOptions.HTTPOptions.Headers["Host"]
 			}
 
 			if p.clashOptions.HTTPOptions.Path != nil {
-				opt.VMessOptions.Transport.HTTPOptions.Path = p.clashOptions.HTTPOptions.Path[0]
+				opt.VLESSOptions.Transport.HTTPOptions.Path = p.clashOptions.HTTPOptions.Path[0]
 			}
 		}
 
 		if p.clashOptions.TLS {
-			opt.VMessOptions.TLS = &option.OutboundTLSOptions{
+			opt.VLESSOptions.TLS = &option.OutboundTLSOptions{
 				Enabled:    true,
 				ServerName: p.clashOptions.Server,
 				Insecure:   p.clashOptions.SkipCertVerify,
 			}
 
 			if p.clashOptions.ServerName != "" {
-				opt.VMessOptions.TLS.ServerName = p.clashOptions.ServerName
+				opt.VLESSOptions.TLS.ServerName = p.clashOptions.ServerName
 			}
 
 			if p.clashOptions.ClientFingerprint != "" {
 				if !GetTag("with_utls") {
 					return nil, E.New(`uTLS is not included in this build, rebuild with -tags with_utls`)
 				}
-				opt.VMessOptions.TLS.UTLS = &option.OutboundUTLSOptions{
+				opt.VLESSOptions.TLS.UTLS = &option.OutboundUTLSOptions{
 					Enabled:     true,
 					Fingerprint: p.clashOptions.ClientFingerprint,
 				}
 			}
 
 			if p.clashOptions.RealityOptions != nil {
-				opt.VMessOptions.TLS.Reality = &option.OutboundRealityOptions{
+				opt.VLESSOptions.TLS.Reality = &option.OutboundRealityOptions{
 					Enabled:   true,
 					PublicKey: p.clashOptions.RealityOptions.PublicKey,
 					ShortID:   p.clashOptions.RealityOptions.ShortID,
@@ -219,7 +226,7 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 			return nil, E.New("missing h2-opts")
 		}
 
-		opt.VMessOptions.Transport = &option.V2RayTransportOptions{
+		opt.VLESSOptions.Transport = &option.V2RayTransportOptions{
 			Type: C.V2RayTransportTypeHTTP,
 			HTTPOptions: option.V2RayHTTPOptions{
 				Host: p.clashOptions.HTTP2Options.Host,
@@ -227,30 +234,30 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 			},
 		}
 
-		opt.VMessOptions.TLS = &option.OutboundTLSOptions{
+		opt.VLESSOptions.TLS = &option.OutboundTLSOptions{
 			Enabled:    true,
 			ServerName: p.clashOptions.Server,
 			Insecure:   p.clashOptions.SkipCertVerify,
 		}
 
-		opt.VMessOptions.TLS.ALPN = []string{"h2"}
+		opt.VLESSOptions.TLS.ALPN = []string{"h2"}
 
 		if p.clashOptions.ServerName != "" {
-			opt.VMessOptions.TLS.ServerName = p.clashOptions.ServerName
+			opt.VLESSOptions.TLS.ServerName = p.clashOptions.ServerName
 		}
 
 		if p.clashOptions.ClientFingerprint != "" {
 			if !GetTag("with_utls") {
 				return nil, E.New(`uTLS is not included in this build, rebuild with -tags with_utls`)
 			}
-			opt.VMessOptions.TLS.UTLS = &option.OutboundUTLSOptions{
+			opt.VLESSOptions.TLS.UTLS = &option.OutboundUTLSOptions{
 				Enabled:     true,
 				Fingerprint: p.clashOptions.ClientFingerprint,
 			}
 		}
 
 		if p.clashOptions.RealityOptions != nil {
-			opt.VMessOptions.TLS.Reality = &option.OutboundRealityOptions{
+			opt.VLESSOptions.TLS.Reality = &option.OutboundRealityOptions{
 				Enabled:   true,
 				PublicKey: p.clashOptions.RealityOptions.PublicKey,
 				ShortID:   p.clashOptions.RealityOptions.ShortID,
@@ -261,35 +268,35 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 			p.clashOptions.GrpcOptions = &proxyClashGrpcOptions{}
 		}
 
-		opt.VMessOptions.Transport = &option.V2RayTransportOptions{
+		opt.VLESSOptions.Transport = &option.V2RayTransportOptions{
 			Type: C.V2RayTransportTypeGRPC,
 			GRPCOptions: option.V2RayGRPCOptions{
 				ServiceName: p.clashOptions.GrpcOptions.ServiceName,
 			},
 		}
 
-		opt.VMessOptions.TLS = &option.OutboundTLSOptions{
+		opt.VLESSOptions.TLS = &option.OutboundTLSOptions{
 			Enabled:    true,
 			Insecure:   p.clashOptions.SkipCertVerify,
 			ServerName: p.clashOptions.Server,
 		}
 
 		if p.clashOptions.ServerName != "" {
-			opt.VMessOptions.TLS.ServerName = p.clashOptions.ServerName
+			opt.VLESSOptions.TLS.ServerName = p.clashOptions.ServerName
 		}
 
 		if p.clashOptions.ClientFingerprint != "" {
 			if !GetTag("with_utls") {
 				return nil, E.New(`uTLS is not included in this build, rebuild with -tags with_utls`)
 			}
-			opt.VMessOptions.TLS.UTLS = &option.OutboundUTLSOptions{
+			opt.VLESSOptions.TLS.UTLS = &option.OutboundUTLSOptions{
 				Enabled:     true,
 				Fingerprint: p.clashOptions.ClientFingerprint,
 			}
 		}
 
 		if p.clashOptions.RealityOptions != nil {
-			opt.VMessOptions.TLS.Reality = &option.OutboundRealityOptions{
+			opt.VLESSOptions.TLS.Reality = &option.OutboundRealityOptions{
 				Enabled:   true,
 				PublicKey: p.clashOptions.RealityOptions.PublicKey,
 				ShortID:   p.clashOptions.RealityOptions.ShortID,
@@ -297,28 +304,28 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 		}
 	default:
 		if p.clashOptions.TLS {
-			opt.VMessOptions.TLS = &option.OutboundTLSOptions{
+			opt.VLESSOptions.TLS = &option.OutboundTLSOptions{
 				Enabled:    true,
 				Insecure:   p.clashOptions.SkipCertVerify,
 				ServerName: p.clashOptions.Server,
 			}
 
 			if p.clashOptions.ServerName != "" {
-				opt.VMessOptions.TLS.ServerName = p.clashOptions.ServerName
+				opt.VLESSOptions.TLS.ServerName = p.clashOptions.ServerName
 			}
 
 			if p.clashOptions.ClientFingerprint != "" {
 				if !GetTag("with_utls") {
 					return nil, E.New(`uTLS is not included in this build, rebuild with -tags with_utls`)
 				}
-				opt.VMessOptions.TLS.UTLS = &option.OutboundUTLSOptions{
+				opt.VLESSOptions.TLS.UTLS = &option.OutboundUTLSOptions{
 					Enabled:     true,
 					Fingerprint: p.clashOptions.ClientFingerprint,
 				}
 			}
 
 			if p.clashOptions.RealityOptions != nil {
-				opt.VMessOptions.TLS.Reality = &option.OutboundRealityOptions{
+				opt.VLESSOptions.TLS.Reality = &option.OutboundRealityOptions{
 					Enabled:   true,
 					PublicKey: p.clashOptions.RealityOptions.PublicKey,
 					ShortID:   p.clashOptions.RealityOptions.ShortID,
@@ -330,13 +337,13 @@ func (p *ProxyVMess) GenerateOptions() (*option.Outbound, error) {
 	switch p.clashOptions.IPVersion {
 	case "dual":
 	case "ipv4":
-		opt.VMessOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyUseIPv4)
+		opt.VLESSOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyUseIPv4)
 	case "ipv6":
-		opt.VMessOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyUseIPv6)
+		opt.VLESSOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyUseIPv6)
 	case "ipv4-prefer":
-		opt.VMessOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyPreferIPv4)
+		opt.VLESSOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyPreferIPv4)
 	case "ipv6-prefer":
-		opt.VMessOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyPreferIPv6)
+		opt.VLESSOptions.DialerOptions.DomainStrategy = option.DomainStrategy(dns.DomainStrategyPreferIPv6)
 	default:
 	}
 
