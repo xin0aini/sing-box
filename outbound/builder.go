@@ -53,6 +53,8 @@ func New(ctx context.Context, router adapter.Router, logger log.ContextLogger, t
 		return NewVLESS(ctx, router, logger, tag, options.VLESSOptions)
 	case C.TypeSideLoad:
 		return NewSideLoad(ctx, router, logger, tag, options.SideLoadOptions)
+	case C.TypeMultiAddr:
+		return NewMultiAddr(ctx, router, logger, tag, options.MultiAddrOptions)
 	case C.TypeSelector:
 		return NewSelector(router, logger, tag, options.SelectorOptions)
 	case C.TypeURLTest:

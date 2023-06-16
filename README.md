@@ -211,3 +211,99 @@ Sing-box 配置：
 以上配置为例子：
 1. 当 A, B, C 都可用时，优选选择 A。当 A 不可用时，优选选择 B。当 A, B 都不可用时，选择 C，若 C 也不可用，则返回第一个出站：A
 2. (配置了 max_delay) 当 A, C 都不可用，B 延迟超过 200ms 时（在第一轮选择时淘汰，被认为是不可用节点），则选择 B
+
+#### 6. MultiAddr 出站
+
+编译时加入 tag with_multiaddr
+
+支持随机不同 IP:Port 连接，只需要将 Detour 设置为这个出站，即可随机使用不同的 IP:Port 组合连接，需要配合其他出站使用，~~可以躲避基于目的地址的审查~~
+
+```
+{
+    "tag": "multiaddr-out",
+    "type": "multiaddr",
+    "addresses": [ // 地址重写规则
+        {
+            "ip": "100.64.0.1", // IP 地址，与 cidr 两者只能设置一个
+            "cidr": "100.64.0.0/10", // CIDR，会从中随机选择 IP，与 ip 两者只能设置一个
+            "port": 80, // 连接端口，与 port_range 两者只能设置一个
+            "port_range": ":3000" // 连接端口范围，与 port 两者只能设置一个，格式：:3000，4000-5000，5000:
+        }
+    ],
+    // Dial Fields
+}
+```
+
+用法1：IPv6 + 多端口
+
+* 需要在服务端使用 iptables 做好映射
+
+```iptables -A PREROUTING -t nat -i eth0 -p tcp --dport 8000:9000 -j REDIRECT --to-port 6000```
+
+```
+[
+    {
+        "tag": "proxy-out",
+        "type": "xxxx",
+        ...
+        "detour": "multiaddr-out"
+    },
+    {
+        "tag": "multiaddr-out",
+        "type": "multiaddr",
+        "addresses": [
+            {
+                "cidr": "2001:db8::/32",
+                "port_range": "8000:9000"
+            }
+        ]
+    }
+]
+```
+
+用法2：配合 WS + CloudFlare CDN **（请勿滥用，后果自负）**
+
+```
+[
+    {
+        "tag": "ws-out",
+        "type": "vmess",
+        ...
+        "transport": {
+            "type": "ws",
+            ...
+        },
+        "detour": "multiaddr-out"
+    },
+    {
+        "tag": "multiaddr-out",
+        "type": "multiaddr",
+        "addresses": [
+            {
+                "cidr": "104.21.0.0/24",
+                "port": 80
+            },
+            {
+                "cidr": "104.22.0.0/24",
+                "port": 80
+            },
+            {
+                "cidr": "104.23.0.0/24",
+                "port": 80
+            },
+            {
+                "cidr": "104.21.0.0/24",
+                "port": 2095
+            },
+            {
+                "cidr": "104.22.0.0/24",
+                "port": 2095
+            },
+            {
+                "cidr": "104.23.0.0/24",
+                "port": 2095
+            }
+        ]
+    }
+]
+```

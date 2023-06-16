@@ -22,6 +22,7 @@ const (
 	TypeShadowsocksR = "shadowsocksr"
 	TypeVLESS        = "vless"
 	TypeSideLoad     = "sideload"
+	TypeMultiAddr    = "multiaddr"
 )
 
 const (
