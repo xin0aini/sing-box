@@ -17,6 +17,7 @@ type ProxyProviderOptions struct {
 	RequestTimeout       Duration                                  `json:"request_timeout,omitempty"`
 	RequestIP            *netip.Addr                               `json:"ip,omitempty"`
 	DNS                  string                                    `json:"dns,omitempty"`
+	TagFormat            string                                    `json:"tag_format,omitempty"`
 	Filter               *ProxyProviderFilterOptions               `json:"filter,omitempty"`
 	DefaultOutbound      string                                    `json:"default_outbound,omitempty"`
 	RequestDialerOptions *ProxyProviderRequestDialerOptions        `json:"request_dialer,omitempty"`

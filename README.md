@@ -54,6 +54,7 @@ with this application without prior consent.
             "ip": "1.1.1.1", // 请求的IP，选填，若不填写，将会使用DNS字段中的DNS服务器
             "http3": true, // 是否使用HTTP/3，选填，实验性，可能会有奇怪的问题，对于节点订阅地址使用了CloudFlare CDN（或者支持HTTP/3的服务器），可以尝试开启
             "dns": "tcp://223.5.5.5", // 请求的DNS服务器，选填，若不填写，将会选择默认DNS，支持(udp/tcp/dot/doh/doh3/doq)
+            "tag_format": "proxyprovider - %s", // 如果有多个订阅并且订阅间存在重名节点，可以尝试使用，其中 %s 为占位符，会被替换为原节点名。比如：原节点名："HongKong 01"，tag_format设置为 "PP - %s"，替换后新节点名会更变为 "PP - HongKong 01"，以解决节点名冲突的问题
             "filter": { // 过滤节点，选填
                 "rule": [
                     "到期"

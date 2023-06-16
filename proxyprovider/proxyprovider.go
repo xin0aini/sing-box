@@ -4,6 +4,7 @@ package proxyprovider
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/sagernet/sing-box/adapter"
@@ -59,6 +60,7 @@ func (p *ProxyProvider) GetOutboundOptions() ([]option.Outbound, error) {
 		if tag == "" {
 			tag = F.ToString(p.Tag(), "-", i)
 		}
+		outboundOptions.Tag = tag
 		outbounds = append(outbounds, *outboundOptions)
 	}
 	if len(outbounds) == 0 {
@@ -72,6 +74,37 @@ func (p *ProxyProvider) GetOutboundOptions() ([]option.Outbound, error) {
 	if groupOutbounds != nil {
 		outbounds = append(outbounds, groupOutbounds...)
 	}
+	var globalDefaultOutbound string
+	if p.options.DefaultOutbound != "" {
+		for _, t := range outbounds {
+			if t.Tag == p.options.DefaultOutbound {
+				globalDefaultOutbound = t.Tag
+				break
+			}
+		}
+	}
+	if p.options.TagFormat != "" {
+		for i := range outbounds {
+			switch outbounds[i].Type {
+			case C.TypeSelector:
+				for j := range outbounds[i].SelectorOptions.Outbounds {
+					outbounds[i].SelectorOptions.Outbounds[j] = fmt.Sprintf(p.options.TagFormat, outbounds[i].SelectorOptions.Outbounds[j])
+				}
+				if outbounds[i].SelectorOptions.Default != "" {
+					outbounds[i].SelectorOptions.Default = fmt.Sprintf(p.options.TagFormat, outbounds[i].SelectorOptions.Default)
+				}
+			case C.TypeURLTest:
+				for j := range outbounds[i].URLTestOptions.Outbounds {
+					outbounds[i].URLTestOptions.Outbounds[j] = fmt.Sprintf(p.options.TagFormat, outbounds[i].URLTestOptions.Outbounds[j])
+				}
+			default:
+				outbounds[i].Tag = fmt.Sprintf(p.options.TagFormat, outbounds[i].Tag)
+			}
+		}
+		if globalDefaultOutbound != "" {
+			globalDefaultOutbound = fmt.Sprintf(p.options.TagFormat, globalDefaultOutbound)
+		}
+	}
 
 	globalGroupTags := make([]string, 0)
 	for _, out := range outbounds {
@@ -83,14 +116,7 @@ func (p *ProxyProvider) GetOutboundOptions() ([]option.Outbound, error) {
 	globalOutboundOptions.Type = C.TypeSelector
 	globalOutboundOptions.SelectorOptions = option.SelectorOutboundOptions{
 		Outbounds: globalGroupTags,
-	}
-	if p.options.DefaultOutbound != "" {
-		for _, t := range globalGroupTags {
-			if t == p.options.DefaultOutbound {
-				globalOutboundOptions.SelectorOptions.Default = t
-				break
-			}
-		}
+		Default:   globalDefaultOutbound,
 	}
 
 	outbounds = append(outbounds, globalOutboundOptions)
@@ -103,52 +129,18 @@ func (p *ProxyProvider) GetOutbounds() ([]adapter.Outbound, error) {
 		return nil, E.New("proxy list is empty")
 	}
 
+	outboundOptions, err := p.GetOutboundOptions()
+	if err != nil {
+		return nil, E.Cause(err, "generate proxyprovider[", p.Tag(), "] options")
+	}
 	outbounds := make([]adapter.Outbound, 0)
-	for i, px := range p.peerList {
-		outboundOptions, err := px.GenerateOptions()
+	for _, outOptions := range outboundOptions {
+		out, err := outbound.New(p.ctx, p.router, p.logFactory.NewLogger(F.ToString("outbound/", outOptions.Type, "[", outOptions.Tag, "]")), outOptions.Tag, outOptions)
 		if err != nil {
-			return nil, E.Cause(err, "parse proxyprovider[", p.Tag(), "] outbound[", px.Tag(), "]")
-		}
-		tag := px.Tag()
-		if tag == "" {
-			tag = F.ToString(p.Tag(), "-", i)
-		}
-		out, err := outbound.New(p.ctx, p.router, p.logFactory.NewLogger(F.ToString("outbound/", outboundOptions.Type, "[", tag, "]")), tag, *outboundOptions)
-		if err != nil {
-			return nil, E.Cause(err, "parse proxyprovider[", p.Tag(), "] outbound[", tag, "]")
+			return nil, E.Cause(err, "create proxyprovider[", p.Tag(), "] outbound[", outOptions.Tag, "]")
 		}
 		outbounds = append(outbounds, out)
 	}
-	if len(outbounds) == 0 {
-		return nil, E.New("proxy list is empty")
-	}
-
-	groupOutbounds, err := p.getCustomGroups(outbounds)
-	if err != nil {
-		return nil, E.Cause(err, "parse proxyprovider[", p.Tag(), "] custom group")
-	}
-	if groupOutbounds != nil {
-		outbounds = append(outbounds, groupOutbounds...)
-	}
-
-	globalGroupTags := make([]string, 0)
-	for _, out := range outbounds {
-		globalGroupTags = append(globalGroupTags, out.Tag())
-	}
-
-	globalOutboundOptions := option.Outbound{}
-	globalOutboundOptions.Tag = p.Tag()
-	globalOutboundOptions.Type = C.TypeSelector
-	globalOutboundOptions.SelectorOptions = option.SelectorOutboundOptions{
-		Outbounds: globalGroupTags,
-	}
-
-	globalOut, err := outbound.New(p.ctx, p.router, p.logFactory.NewLogger(F.ToString("outbound/", globalOutboundOptions.Type, "[", globalOutboundOptions.Tag, "]")), globalOutboundOptions.Tag, globalOutboundOptions)
-	if err != nil {
-		return nil, E.Cause(err, "parse proxyprovider[", p.Tag(), "] outbound[", globalOutboundOptions.Tag, "]")
-	}
-
-	outbounds = append(outbounds, globalOut)
 
 	return outbounds, nil
 }
