@@ -5,6 +5,7 @@ package outbound
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"math/rand"
 	"net"
 	"net/netip"
@@ -113,6 +114,8 @@ func (m *MultiAddr) getDestination(destination M.Socksaddr) M.Socksaddr {
 
 type multiAddr struct {
 	ip        *netip.Addr
+	startIP   *netip.Addr
+	endIP     *netip.Addr
 	prefix    *netip.Prefix
 	port      uint16
 	startPort uint16
@@ -121,7 +124,7 @@ type multiAddr struct {
 
 func newMultiAddr(options option.MultiAddrOptions) (*multiAddr, error) {
 	m := &multiAddr{}
-	done := false
+	portDone := 0
 	if options.PortRange != "" {
 		sub := strings.SplitN(options.PortRange, ":", 2)
 		if sub[0] == "" && sub[1] == "" {
@@ -154,15 +157,16 @@ func newMultiAddr(options option.MultiAddrOptions) (*multiAddr, error) {
 		}
 		m.startPort = startPort
 		m.endPort = endPort
-		done = true
+		portDone++
 	}
 	if options.Port > 0 {
 		if options.Port > 65535 {
 			return nil, E.New("invalid port: ", options.Port)
 		}
 		m.port = options.Port
-		done = true
+		portDone++
 	}
+	ipDone := 0
 	if options.CIDR != "" {
 		prefix, err := netip.ParsePrefix(options.CIDR)
 		if err != nil {
@@ -170,7 +174,37 @@ func newMultiAddr(options option.MultiAddrOptions) (*multiAddr, error) {
 		}
 		m.prefix = new(netip.Prefix)
 		*m.prefix = prefix.Masked()
-		done = true
+		ipDone++
+	}
+	if options.IPRange != "" {
+		sub := strings.SplitN(options.IPRange, "-", 2)
+		if len(sub) != 2 {
+			return nil, E.New("invalid ip range: ", options.IPRange)
+		}
+		startStr := strings.TrimSpace(sub[0])
+		endStr := strings.TrimSpace(sub[1])
+		startIP, err := netip.ParseAddr(startStr)
+		if err != nil {
+			return nil, E.Cause(err, "invalid ip range: ", options.IPRange)
+		}
+		endIP, err := netip.ParseAddr(endStr)
+		if err != nil {
+			return nil, E.Cause(err, "invalid ip range: ", options.IPRange)
+		}
+		if !startIP.IsValid() || !endIP.IsValid() {
+			return nil, E.New("invalid ip range: ", options.IPRange)
+		}
+		if (startIP.Is4() && endIP.Is6()) || (startIP.Is6() && endIP.Is4()) {
+			return nil, E.New("invalid ip range: ", options.IPRange)
+		}
+		if !startIP.Less(endIP) {
+			return nil, E.New("invalid ip range: ", options.IPRange)
+		}
+		m.startIP = new(netip.Addr)
+		*m.startIP = startIP
+		m.endIP = new(netip.Addr)
+		*m.endIP = endIP
+		ipDone++
 	}
 	if options.IP != "" {
 		ip, err := netip.ParseAddr(options.IP)
@@ -179,9 +213,9 @@ func newMultiAddr(options option.MultiAddrOptions) (*multiAddr, error) {
 		}
 		m.ip = new(netip.Addr)
 		*m.ip = ip
-		done = true
+		ipDone++
 	}
-	if !done {
+	if portDone > 1 || ipDone > 1 {
 		return nil, E.New("invalid address: ", fmt.Sprint(options))
 	}
 	return m, nil
@@ -195,63 +229,16 @@ func (m *multiAddr) getAddr(destination M.Socksaddr) M.Socksaddr {
 	}
 	if m.prefix != nil {
 		if m.prefix.Addr().Is4() {
-			slice := m.prefix.Addr().As4()
-			n := 1<<5 - m.prefix.Bits()
-			if n == 0 {
-				destination.Addr = m.prefix.Addr()
-				if port != 0 {
-					destination.Port = port
-				}
-				return destination
-			}
-			w1 := uint(n) / uint(1<<3)
-			w2 := uint(n) % uint(1<<3)
-			if w2 == 0 {
-				w2 = 1 << 3
-				w1 -= 1
-			}
-			for i := uint(0); i <= w1; i++ {
-				r := rand.New(rand.NewSource(time.Now().UnixNano()))
-				b := byte(r.Intn(1 << w2))
-				if b == 0 {
-					b = 1
-				}
-				slice[3-i] += b
-			}
-			destination.Addr = netip.AddrFrom4(slice)
-			if port != 0 {
-				destination.Port = port
-			}
-			return destination
+			destination.Addr = randomAddrFromPrefix4(*m.prefix)
 		} else {
-			slice := m.prefix.Addr().As16()
-			n := 1<<7 - m.prefix.Bits()
-			if n == 0 {
-				destination.Addr = m.prefix.Addr()
-				if port != 0 {
-					destination.Port = port
-				}
-				return destination
-			}
-			w1 := uint(n) / uint(1<<3)
-			w2 := uint(n) % uint(1<<3)
-			if w2 == 0 {
-				w2 = 1 << 3
-				w1 -= 1
-			}
-			for i := uint(0); i <= w1; i++ {
-				r := rand.New(rand.NewSource(time.Now().UnixNano()))
-				b := byte(r.Intn(1 << w2))
-				if b == 0 {
-					b = 1
-				}
-				slice[15-i] += b
-			}
-			destination.Addr = netip.AddrFrom16(slice)
-			if port != 0 {
-				destination.Port = port
-			}
-			return destination
+			destination.Addr = randomAddrFromPrefix6(*m.prefix)
+		}
+	}
+	if m.startIP != nil && m.endIP != nil {
+		if m.startIP.Is4() {
+			destination.Addr = randomAddrFromRange4(*m.startIP, *m.endIP)
+		} else {
+			destination.Addr = randomAddrFromRange6(*m.startIP, *m.endIP)
 		}
 	}
 	if m.ip != nil {
@@ -261,4 +248,75 @@ func (m *multiAddr) getAddr(destination M.Socksaddr) M.Socksaddr {
 		destination.Port = port
 	}
 	return destination
+}
+
+func randomByte(n int) byte {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	return byte(r.Intn(n))
+}
+
+func randomAddrFromPrefix4(prefix netip.Prefix) netip.Addr {
+	slice := prefix.Addr().As4()
+	n := 1<<5 - prefix.Bits()
+	if n == 0 {
+		return prefix.Addr()
+	}
+	w1 := uint(n) / uint(1<<3)
+	w2 := uint(n) % uint(1<<3)
+	if w2 == 0 {
+		w2 = 1 << 3
+		w1 -= 1
+	}
+	for i := uint(0); i <= w1; i++ {
+		b := randomByte(1 << w2)
+		if b == 0 {
+			b = 1
+		}
+		slice[3-i] += b
+	}
+	return netip.AddrFrom4(slice)
+}
+
+func randomAddrFromPrefix6(prefix netip.Prefix) netip.Addr {
+	slice := prefix.Addr().As16()
+	n := 1<<7 - prefix.Bits()
+	if n == 0 {
+		return prefix.Addr()
+	}
+	w1 := uint(n) / uint(1<<3)
+	w2 := uint(n) % uint(1<<3)
+	if w2 == 0 {
+		w2 = 1 << 3
+		w1 -= 1
+	}
+	for i := uint(0); i <= w1; i++ {
+		b := randomByte(1 << w2)
+		if b == 0 {
+			b = 1
+		}
+		slice[15-i] += b
+	}
+	return netip.AddrFrom16(slice)
+}
+
+func randomAddrFromRange4(start, end netip.Addr) netip.Addr {
+	startN := big.NewInt(0).SetBytes(start.AsSlice())
+	endN := big.NewInt(0).SetBytes(end.AsSlice())
+	bt := big.NewInt(0).Sub(endN, startN)
+	n := big.NewInt(0).Rand(rand.New(rand.NewSource(time.Now().UnixNano())), bt)
+	n.Add(n, startN)
+	var newAddr [4]byte
+	copy(newAddr[:], n.Bytes())
+	return netip.AddrFrom4(newAddr)
+}
+
+func randomAddrFromRange6(start, end netip.Addr) netip.Addr {
+	startN := big.NewInt(0).SetBytes(start.AsSlice())
+	endN := big.NewInt(0).SetBytes(end.AsSlice())
+	bt := big.NewInt(0).Sub(endN, startN)
+	n := big.NewInt(0).Rand(rand.New(rand.NewSource(time.Now().UnixNano())), bt)
+	n.Add(n, startN)
+	var newAddr [16]byte
+	copy(newAddr[:], n.Bytes())
+	return netip.AddrFrom16(newAddr)
 }
