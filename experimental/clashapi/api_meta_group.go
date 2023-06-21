@@ -89,7 +89,13 @@ func getGroupDelay(server *Server) func(w http.ResponseWriter, r *http.Request) 
 				itOutbound, _ := server.router.Outbound(it)
 				return itOutbound
 			}))
-			b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](10))
+			var concurrencyNum int
+			if len(outbounds) > 16 {
+				concurrencyNum = len(outbounds) / 2
+			} else {
+				concurrencyNum = len(outbounds)
+			}
+			b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](concurrencyNum))
 			checked := make(map[string]bool)
 			result = make(map[string]uint16)
 			var resultAccess sync.Mutex

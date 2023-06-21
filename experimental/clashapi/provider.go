@@ -11,7 +11,8 @@ import (
 	"github.com/sagernet/sing-box/common/badjson"
 	"github.com/sagernet/sing-box/common/urltest"
 	C "github.com/sagernet/sing-box/constant"
-	"github.com/sagernet/sing-box/outbound"
+	"github.com/sagernet/sing/common"
+	"github.com/sagernet/sing/common/batch"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -83,32 +84,46 @@ func updateProvider(server *Server) func(w http.ResponseWriter, r *http.Request)
 func healthCheckProvider(server *Server, router adapter.Router) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		proxyProvider := r.Context().Value(CtxKeyProvider).(adapter.ProxyProvider)
-		outs := router.GetProxyProviderOutbound(proxyProvider.Tag())
-		if outs == nil {
+		outbounds := router.GetProxyProviderOutbound(proxyProvider.Tag())
+		if outbounds == nil {
 			render.NoContent(w, r)
 		}
+		outbounds = common.FilterNotNil(outbounds)
 
-		wg := sync.WaitGroup{}
-		for _, out := range outs {
-			wg.Add(1)
-			go func(out adapter.Outbound) {
-				defer wg.Done()
-				realTag := outbound.RealTag(out)
-				ctx, cancel := context.WithTimeout(server.ctx, time.Second*30)
-				defer cancel()
-				delay, err := urltest.URLTest(ctx, "", out)
-				if err != nil {
-					server.urlTestHistory.DeleteURLTestHistory(realTag)
-				} else {
-					server.urlTestHistory.StoreURLTestHistory(realTag, &urltest.History{
-						Time:  time.Now(),
-						Delay: delay,
-					})
-				}
-			}(out)
+		ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+		defer cancel()
+		var concurrencyNum int
+		if len(outbounds) > 16 {
+			concurrencyNum = len(outbounds) / 2
+		} else {
+			concurrencyNum = len(outbounds)
 		}
-		wg.Wait()
-		render.NoContent(w, r)
+		b, _ := batch.New(ctx, batch.WithConcurrencyNum[any](concurrencyNum))
+		result := make(map[string]uint16)
+		var resultAccess sync.Mutex
+		for _, detour := range outbounds {
+			tag := detour.Tag()
+			b.Go(tag, func() (any, error) {
+				t, err := urltest.URLTest(ctx, "", detour)
+				if err != nil {
+					server.logger.Debug("outbound ", tag, " unavailable: ", err)
+					server.urlTestHistory.DeleteURLTestHistory(tag)
+				} else {
+					server.logger.Debug("outbound ", tag, " available: ", t, "ms")
+					server.urlTestHistory.StoreURLTestHistory(tag, &urltest.History{
+						Time:  time.Now(),
+						Delay: t,
+					})
+					resultAccess.Lock()
+					result[tag] = t
+					resultAccess.Unlock()
+				}
+				return nil, nil
+			})
+		}
+		b.Wait()
+
+		render.JSON(w, r, result)
 	}
 }
 
