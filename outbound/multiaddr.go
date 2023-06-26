@@ -74,8 +74,8 @@ func (m *MultiAddr) Type() string {
 func (m *MultiAddr) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = m.tag
-	metadata.Destination = destination
 	destination = m.getDestination(destination)
+	metadata.Destination = destination
 	network = N.NetworkName(network)
 	switch network {
 	case N.NetworkTCP:
@@ -89,8 +89,8 @@ func (m *MultiAddr) DialContext(ctx context.Context, network string, destination
 func (m *MultiAddr) ListenPacket(ctx context.Context, destination M.Socksaddr) (net.PacketConn, error) {
 	ctx, metadata := adapter.AppendContext(ctx)
 	metadata.Outbound = m.tag
-	metadata.Destination = destination
 	destination = m.getDestination(destination)
+	metadata.Destination = destination
 	m.logger.InfoContext(ctx, "outbound packet connection to ", destination)
 	conn, err := m.dialer.ListenPacket(ctx, destination)
 	if err != nil {
@@ -247,6 +247,7 @@ func (m *multiAddr) getAddr(destination M.Socksaddr) M.Socksaddr {
 	if port != 0 {
 		destination.Port = port
 	}
+	destination.Fqdn = ""
 	return destination
 }
 
